@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Outbound">
+<title>Outbound Tracker</title>
+<style>
+  :root {
+    --purple: #7C3AED;
+    --purple-light: #EDE9FE;
+    --purple-mid: #A78BFA;
+    --green: #059669;
+    --green-light: #ECFDF5;
+    --amber: #D97706;
+    --amber-light: #FFFBEB;
+    --red: #DC2626;
+    --red-light: #FEF2F2;
+    --gray: #6B7280;
+    --gray-light: #F9FAFB;
+    --gray-border: #E5E7EB;
+    --text: #111827;
+    --text-soft: #6B7280;
+    --bg: #F3F4F6;
+    --white: #FFFFFF;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; background: var(--bg); min-height: 100vh; padding-bottom: 40px; }
+
+  .topbar { background: var(--white); border-bottom: 1px solid var(--gray-border); padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .topbar-title { font-size: 17px; font-weight: 600; color: var(--text); }
+  .topbar-date { font-size: 12px; color: var(--text-soft); margin-top: 2px; }
+  .settings-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--gray-light); border: 1px solid var(--gray-border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+
+  .hero { background: linear-gradient(135deg, #7C3AED, #A78BFA); margin: 16px; border-radius: var(--radius); padding: 24px; text-align: center; color: white; }
+  .hero-num { font-size: 72px; font-weight: 700; line-height: 1; letter-spacing: -2px; }
+  .hero-label { font-size: 14px; opacity: 0.85; margin-top: 4px; font-weight: 500; }
+  .hero-goal { font-size: 12px; opacity: 0.65; margin-top: 6px; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 0 16px 16px; }
+  .stat { background: var(--white); border-radius: var(--radius-sm); padding: 12px; text-align: center; border: 1px solid var(--gray-border); }
+  .stat-num { font-size: 22px; font-weight: 700; }
+  .stat-lbl { font-size: 10px; color: var(--text-soft); margin-top: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat.pending .stat-num { color: var(--amber); }
+  .stat.replied .stat-num { color: var(--green); }
+  .stat.followup .stat-num { color: var(--purple); }
+
+  .section { margin: 0 16px 16px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .upload-card { background: var(--white); border: 2px dashed var(--purple-mid); border-radius: var(--radius); padding: 28px 20px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .upload-card:active { background: var(--purple-light); transform: scale(0.98); }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; }
+  .upload-title { font-size: 16px; font-weight: 600; color: var(--purple); }
+  .upload-sub { font-size: 13px; color: var(--text-soft); margin-top: 4px; }
+  #fileInput { display: none; }
+
+  .analyzing-card { background: var(--white); border-radius: var(--radius); padding: 18px; border: 1px solid var(--gray-border); display: none; }
+  .analyzing-row { display: flex; align-items: center; gap: 14px; }
+  .preview-thumb { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--gray-border); }
+  .analyzing-info { flex: 1; }
+  .analyzing-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .analyzing-sub { font-size: 12px; color: var(--text-soft); margin-top: 3px; }
+  .spinner { width: 22px; height: 22px; border: 2.5px solid var(--purple-light); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast { border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: none; }
+  .toast.success { background: var(--green-light); border: 1px solid #A7F3D0; }
+  .toast.error { background: var(--red-light); border: 1px solid #FECACA; }
+  .toast-title { font-size: 15px; font-weight: 600; }
+  .toast.success .toast-title { color: var(--green); }
+  .toast.error .toast-title { color: var(--red); }
+  .toast-sub { font-size: 13px; margin-top: 2px; }
+  .toast.success .toast-sub { color: #065F46; }
+  .toast.error .toast-sub { color: #991B1B; }
+
+  .filter-row { display: flex; gap: 6px; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--gray-border); background: var(--white); font-size: 13px; font-weight: 500; color: var(--text-soft); cursor: pointer; transition: all 0.15s; font-family: inherit; }
+  .filter-btn.active { background: var(--purple); border-color: var(--purple); color: white; }
+
+  .leads-list { background: var(--white); border-radius: var(--radius); border: 1px solid var(--gray-border); overflow: hidden; }
+  .lead-item { padding: 13px 16px; border-bottom: 1px solid var(--gray-border); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.1s; }
+  .lead-item:last-child { border-bottom: none; }
+  .lead-item:active { background: var(--gray-light); }
+  .lead-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .av-pending { background: var(--amber-light); color: var(--amber); }
+  .av-replied { background: var(--green-light); color: var(--green); }
+  .av-followup { background: var(--purple-light); color: var(--purple); }
+  .lead-body { flex: 1; min-width: 0; }
+  .lead-user { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lead-meta { font-size: 11px; color: var(--text-soft); margin-top: 2px; }
+  .lead-badge { font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.3px; }
+  .b-pending { background: var(--amber-light); color: var(--amber); }
+  .b-replied { background: var(--green-light); color: var(--green); }
+  .b-followup { background: var(--purple-light); color: var(--purple); }
+  .empty { padding: 40px 20px; text-align: center; color: var(--text-soft); font-size: 14px; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  .export-btn { width: 100%; padding: 14px; background: var(--white); border: 1px solid var(--gray-border); border-radius: var(--radius); font-size: 15px; font-weight: 600; color: var(--text-soft); cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s; }
+  .export-btn:active { background: var(--gray-light); }
+
+  /* Modal */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .sheet { background: var(--white); border-radius: 20px 20px 0 0; width: 100%; max-width: 500px; padding: 20px; padding-bottom: 34px; }
+  .sheet-handle { width: 36px; height: 4px; background: var(--gray-border); border-radius: 2px; margin: 0 auto 16px; }
+  .sheet-user { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+  .sheet-btn { width: 100%; padding: 14px 16px; border-radius: var(--radius-sm); border: 1px solid var(--gray-border); background: var(--white); font-size: 15px; font-family: inherit; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-weight: 500; transition: all 0.15s; }
+  .sheet-btn:active { background: var(--gray-light); }
+  .sheet-btn.danger { color: var(--red); border-color: #FECACA; background: var(--red-light); }
+  .sheet-icon { font-size: 20px; }
+  .sheet-cancel { width: 100%; padding: 14px; background: var(--gray-light); border: none; border-radius: var(--radius-sm); font-size: 15px; font-family: inherit; cursor: pointer; color: var(--text-soft); font-weight: 600; margin-top: 4px; }
+
+  /* API Setup */
+  .api-card { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius); padding: 16px; display: none; }
+  .api-card-title { font-size: 14px; font-weight: 700; color: #92400E; margin-bottom: 6px; }
+  .api-card-sub { font-size: 12px; color: #92400E; margin-bottom: 12px; line-height: 1.5; }
+  .api-input { width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #FDE68A; background: white; font-size: 14px; font-family: -apple-system, sans-serif; color: var(--text); margin-bottom: 8px; }
+  .api-save { width: 100%; padding: 11px; background: var(--purple); color: white; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; }
+
+  .manual-btn { background: var(--purple-light); border: 1px solid var(--purple-mid); border-radius: var(--radius); padding: 16px; text-align: center; cursor: pointer; margin-top: 10px; }
+  .manual-btn-title { font-size: 14px; font-weight: 600; color: var(--purple); }
+  .manual-btn-sub { font-size: 12px; color: var(--purple-mid); margin-top: 3px; }
+  
+  .manual-input-row { display: none; background: var(--white); border: 1px solid var(--gray-border); border-radius: var(--radius); padding: 16px; margin-top: 10px; }
+  .manual-text { width: 100%; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--gray-border); font-size: 15px; font-family: -apple-system, sans-serif; color: var(--text); margin-bottom: 10px; }
+  .manual-add { width: 100%; padding: 12px; background: var(--purple); color: white; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">📲 Outbound Tracker</div>
+    <div class="topbar-date" id="topbarDate"></div>
+  </div>
+  <div class="settings-btn" onclick="toggleApiSetup()">⚙️</div>
+</div>
+
+<div style="padding: 16px 16px 0;">
+  <div class="api-card" id="apiCard">
+    <div class="api-card-title">⚡ Configura tu API key de Anthropic</div>
+    <div class="api-card-sub">La necesitas para que la IA lea el @usuario del screenshot automáticamente. La obtienes en console.anthropic.com → API Keys.</div>
+    <input class="api-input" type="password" id="apiKeyInput" placeholder="sk-ant-...">
+    <button class="api-save" onclick="saveApiKey()">Guardar y activar</button>
+  </div>
+</div>
+
+<div class="hero" style="margin-top: 16px;">
+  <div class="hero-num" id="heroNum">0</div>
+  <div class="hero-label">outbounds hoy</div>
+  <div class="hero-goal" id="heroGoal"></div>
+</div>
+
+<div class="stats">
+  <div class="stat pending">
+    <div class="stat-num" id="statPending">0</div>
+    <div class="stat-lbl">Sin resp.</div>
+  </div>
+  <div class="stat replied">
+    <div class="stat-num" id="statReplied">0</div>
+    <div class="stat-lbl">Contestaron</div>
+  </div>
+  <div class="stat followup">
+    <div class="stat-num" id="statFollowup">0</div>
+    <div class="stat-lbl">Follow-up</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="upload-card" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-icon">📸</div>
+    <div class="upload-title">Subir screenshot de IG</div>
+    <div class="upload-sub">La IA extrae el @usuario automáticamente</div>
+    <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)">
+  </div>
+
+  <div class="manual-btn" onclick="toggleManual()">
+    <div class="manual-btn-title">✍️ Agregar manualmente</div>
+    <div class="manual-btn-sub">Si no tienes screenshot, escribe el @usuario directo</div>
+  </div>
+
+  <div class="manual-input-row" id="manualRow">
+    <input class="manual-text" type="text" id="manualInput" placeholder="@usuario_de_instagram">
+    <button class="manual-add" onclick="addManual()">Agregar lead</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="analyzing-card" id="analyzingCard">
+    <div class="analyzing-row">
+      <img class="preview-thumb" id="previewThumb" src="" alt="">
+      <div class="analyzing-info">
+        <div class="analyzing-title">Analizando con IA...</div>
+        <div class="analyzing-sub">Extrayendo el @usuario del perfil</div>
+      </div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">Leads</span>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('all',this)">Todos</button>
+      <button class="filter-btn" onclick="setFilter('pending',this)">Pendientes</button>
+      <button class="filter-btn" onclick="setFilter('followup',this)">Follow-up</button>
+    </div>
+  </div>
+  <div class="leads-list" id="leadsList"></div>
+</div>
+
+<div class="section">
+  <button class="export-btn" onclick="exportCSV()">📥 Exportar CSV del día</button>
+</div>
+
+<!-- Bottom sheet -->
+<div class="overlay" id="overlay" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-user" id="sheetUser"></div>
+    <button class="sheet-btn" onclick="setStatus('replied')"><span class="sheet-icon">✅</span> Contestó</button>
+    <button class="sheet-btn" onclick="setStatus('followup')"><span class="sheet-icon">🔔</span> Marcar para follow-up</button>
+    <button class="sheet-btn" onclick="setStatus('pending')"><span class="sheet-icon">🔄</span> Volver a pendiente</button>
+    <button class="sheet-btn danger" onclick="deleteLead()"><span class="sheet-icon">🗑️</span> Eliminar lead</button>
+    <button class="sheet-cancel" onclick="closeSheet()">Cancelar</button>
+  </div>
+</div>
+
+<script>
+const DAYS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+let leads = JSON.parse(localStorage.getItem('ob_leads') || '[]');
+let apiKey = localStorage.getItem('ob_apikey') || '';
+let currentFilter = 'all';
+let selectedId = null;
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function init() {
+  const d = new Date();
+  document.getElementById('topbarDate').textContent = `${DAYS[d.getDay()]} ${d.getDate()} de ${MONTHS[d.getMonth()]}`;
+  if (!apiKey) document.getElementById('apiCard').style.display = 'block';
+  checkUrlParam();
+  render();
+}
+
+function checkUrlParam() {
+  const params = new URLSearchParams(window.location.search);
+  const u = params.get('add');
+  if (u) {
+    addLead(decodeURIComponent(u));
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+function toggleApiSetup() {
+  const card = document.getElementById('apiCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) return;
+  apiKey = k;
+  localStorage.setItem('ob_apikey', k);
+  document.getElementById('apiCard').style.display = 'none';
+  showToast('success', '✓ API key guardada', 'Ya puedes analizar screenshots con IA');
+}
+
+function toggleManual() {
+  const row = document.getElementById('manualRow');
+  row.style.display = row.style.display === 'flex' ? 'none' : 'flex';
+  row.style.flexDirection = 'column';
+  if (row.style.display === 'flex') document.getElementById('manualInput').focus();
+}
+
+function addManual() {
+  const val = document.getElementById('manualInput').value.trim();
+  if (!val) return;
+  const u = val.startsWith('@') ? val : '@' + val;
+  addLead(u);
+  document.getElementById('manualInput').value = '';
+  document.getElementById('manualRow').style.display = 'none';
+}
+
+async function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    document.getElementById('previewThumb').src = ev.target.result;
+    document.getElementById('analyzingCard').style.display = 'block';
+    document.getElementById('toast').style.display = 'none';
+    const base64 = ev.target.result.split(',')[1];
+    if (apiKey) {
+      await analyzeWithAI(base64);
+    } else {
+      setTimeout(() => {
+        document.getElementById('analyzingCard').style.display = 'none';
+        document.getElementById('apiCard').style.display = 'block';
+        showToast('error', 'Falta API key', 'Configura tu API key de Anthropic primero');
+      }, 800);
+    }
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+async function analyzeWithAI(base64) {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 100,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: 'Este es un screenshot de un perfil de Instagram. Extrae SOLO el nombre de usuario (el handle que empieza con @ o aparece debajo del nombre). Responde ÚNICAMENTE con el @usuario. Sin explicaciones. Si no puedes identificarlo responde: UNKNOWN' }
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    const username = data.content?.[0]?.text?.trim() || 'UNKNOWN';
+    document.getElementById('analyzingCard').style.display = 'none';
+    if (username === 'UNKNOWN') {
+      showToast('error', 'No se pudo leer el @usuario', 'Asegúrate de que el screenshot muestre claramente el perfil');
+    } else {
+      addLead(username);
+    }
+  } catch(err) {
+    document.getElementById('analyzingCard').style.display = 'none';
+    showToast('error', 'Error de conexión', 'Verifica tu API key e internet');
+  }
+}
+
+function addLead(username) {
+  const lead = {
+    id: Date.now().toString(),
+    username: username.startsWith('@') ? username : '@' + username,
+    status: 'pending',
+    date: todayStr(),
+    timestamp: new Date().toISOString()
+  };
+  leads.unshift(lead);
+  save();
+  render();
+  showToast('success', '✓ Outbound registrado', lead.username + ' añadido a tu lista');
+}
+
+function render() {
+  const today = leads.filter(l => l.date === todayStr());
+  document.getElementById('heroNum').textContent = today.length;
+  document.getElementById('heroGoal').textContent = today.length >= 50 ? '🔥 Meta cumplida' : `${50 - today.length} para llegar a 50`;
+  document.getElementById('statPending').textContent = leads.filter(l => l.status === 'pending').length;
+  document.getElementById('statReplied').textContent = leads.filter(l => l.status === 'replied').length;
+  document.getElementById('statFollowup').textContent = leads.filter(l => l.status === 'followup').length;
+
+  let filtered = currentFilter === 'all' ? leads : leads.filter(l => l.status === currentFilter);
+  const list = document.getElementById('leadsList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No hay leads aún</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(lead => {
+    const initials = lead.username.replace('@','').substring(0,2).toUpperCase();
+    const avClass = lead.status === 'replied' ? 'av-replied' : lead.status === 'followup' ? 'av-followup' : 'av-pending';
+    const bClass = lead.status === 'replied' ? 'b-replied' : lead.status === 'followup' ? 'b-followup' : 'b-pending';
+    const bText = lead.status === 'replied' ? 'Contestó' : lead.status === 'followup' ? 'Follow-up' : 'Sin resp.';
+    const t = new Date(lead.timestamp);
+    const time = t.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+    const isToday = lead.date === todayStr();
+    const dateLabel = isToday ? `hoy ${time}` : `${lead.date} ${time}`;
+    return `<div class="lead-item" onclick="openSheet('${lead.id}')">
+      <div class="lead-avatar ${avClass}">${initials}</div>
+      <div class="lead-body">
+        <div class="lead-user">${lead.username}</div>
+        <div class="lead-meta">${dateLabel}</div>
+      </div>
+      <span class="lead-badge ${bClass}">${bText}</span>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function openSheet(id) {
+  selectedId = id;
+  const lead = leads.find(l => l.id === id);
+  document.getElementById('sheetUser').textContent = lead.username;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  selectedId = null;
+}
+
+function setStatus(status) {
+  const idx = leads.findIndex(l => l.id === selectedId);
+  if (idx > -1) leads[idx].status = status;
+  save(); render(); closeSheet();
+}
+
+function deleteLead() {
+  leads = leads.filter(l => l.id !== selectedId);
+  save(); render(); closeSheet();
+}
+
+function save() {
+  localStorage.setItem('ob_leads', JSON.stringify(leads));
+}
+
+function showToast(type, title, sub) {
+  const t = document.getElementById('toast');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<div class="toast-title">${title}</div><div class="toast-sub">${sub}</div>`;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+function exportCSV() {
+  const today = leads.filter(l => l.date === todayStr());
+  if (!today.length) { showToast('error', 'Sin datos hoy', 'No hay outbounds registrados hoy'); return; }
+  const rows = [['Usuario','Estado','Hora','Fecha']];
+  today.forEach(l => {
+    const time = new Date(l.timestamp).toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' });
+    rows.push([l.username, l.status, time, l.date]);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `outbound_${todayStr()}.csv`;
+  a.click();
+}
+
+init();
+</script>
+</body>
+</html>
