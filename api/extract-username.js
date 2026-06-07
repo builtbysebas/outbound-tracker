@@ -1,8 +1,6 @@
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
+    bodyParser: false,
   },
 };
 
@@ -12,27 +10,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    let base64 = '';
-
-    // Handle both raw binary and base64 string input
-    if (Buffer.isBuffer(req.body)) {
-      base64 = req.body.toString('base64');
-    } else if (typeof req.body === 'string') {
-      // Already base64 or raw string
-      base64 = Buffer.from(req.body, 'binary').toString('base64');
-    } else {
-      // Try to get raw body
-      const chunks = [];
-      for await (const chunk of req) {
-        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-      }
-      base64 = Buffer.concat(chunks).toString('base64');
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
     }
+    const buffer = Buffer.concat(chunks);
+    const base64 = buffer.toString('base64');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': 'sk-ant-api03-URPvMrPH_JaS65veXtOW9DjUMLF0zEOXidwHJQaCpD_w3jInFbcNr4fSUAMWfkevzNjC5rn-7LKMq0a5ygXw6A-BQdoiAAA',
+        'x-api-key': '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',
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
@@ -62,9 +50,9 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    
+
     if (data.error) {
-      return res.status(500).json({ error: data.error.message, raw: data });
+      return res.status(500).json({ error: data.error.message });
     }
 
     const username = data.content?.[0]?.text?.trim() || '';
