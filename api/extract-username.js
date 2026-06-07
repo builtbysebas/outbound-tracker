@@ -1,6 +1,8 @@
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
   },
 };
 
@@ -10,12 +12,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
+    let base64 = '';
+
+    // Handle both raw binary and base64 string input
+    if (Buffer.isBuffer(req.body)) {
+      base64 = req.body.toString('base64');
+    } else if (typeof req.body === 'string') {
+      // Already base64 or raw string
+      base64 = Buffer.from(req.body, 'binary').toString('base64');
+    } else {
+      // Try to get raw body
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+      }
+      base64 = Buffer.concat(chunks).toString('base64');
     }
-    const buffer = Buffer.concat(chunks);
-    const base64 = buffer.toString('base64');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -50,9 +62,14 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    const username = data.content?.[0]?.text?.trim() || '';
+    
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message, raw: data });
+    }
 
+    const username = data.content?.[0]?.text?.trim() || '';
     return res.status(200).json({ username });
+
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
