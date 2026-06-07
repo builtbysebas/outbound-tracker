@@ -107,7 +107,7 @@ let allLeads = [];
 let currentFilter = 'all';
 
 function todayStr() {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
 }
 
 function formatDate(dateStr) {
