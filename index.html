@@ -217,7 +217,7 @@ function renderLeads() {
       <div class="lead-card">
         <div class="avatar ${sc}">${getInitials(lead.username)}</div>
         <div class="lead-info">
-          <div class="lead-username">${lead.username}</div>
+          <a href="https://www.instagram.com/${lead.username.replace('@','')}/" target="_blank" style="color:#fff;text-decoration:none;font-size:15px;font-weight:700;display:block;margin-bottom:3px">${lead.username} <span style="font-size:10px;color:rgba(255,255,255,0.3)">↗</span></a>
           <div class="lead-meta">${lead.fecha} ${lead.hora ? '· ' + lead.hora : ''}</div>
         </div>
         <div class="status-badge ${sc}">${label}</div>
