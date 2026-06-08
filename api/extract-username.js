@@ -4,6 +4,12 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const apiKey = req.headers['x-anthropic-key'];
+    
+    if (!apiKey) {
+      return res.status(400).json({ error: 'Missing x-anthropic-key header' });
+    }
+
     const chunks = [];
     await new Promise((resolve, reject) => {
       req.on('data', chunk => chunks.push(chunk));
@@ -16,7 +22,7 @@ module.exports = async (req, res) => {
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': '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',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
