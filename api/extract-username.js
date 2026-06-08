@@ -5,7 +5,6 @@ module.exports = async (req, res) => {
 
   try {
     const apiKey = req.headers['x-anthropic-key'];
-    
     if (!apiKey) {
       return res.status(400).json({ error: 'Missing x-anthropic-key header' });
     }
@@ -46,6 +45,9 @@ module.exports = async (req, res) => {
     });
 
     const data = await anthropicRes.json();
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message });
+    }
     const username = data.content?.[0]?.text?.trim() || '';
     return res.status(200).json({ username });
 
