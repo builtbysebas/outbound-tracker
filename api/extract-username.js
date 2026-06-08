@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
             },
             {
               type: 'text',
-              text: 'Esta es una captura de pantalla de un perfil de Instagram. El username aparece en la barra superior junto a la flecha de regreso. Responde ÚNICAMENTE con el @username. Nada más.'
+              text: 'Lee la barra superior de navegación de este perfil de Instagram. El username está en letras pequeñas junto a la flecha "<" de regreso. COPIA ESE TEXTO EXACTAMENTE, caracter por caracter, sin corregir ni cambiar NADA. Si hay letras repetidas como "nn", "ll", "rr", cópialas exactamente. Responde SOLO con @username.'
             }
           ]
         }]
