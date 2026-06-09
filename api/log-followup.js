@@ -20,7 +20,8 @@ module.exports = async (req, res) => {
     });
 
     const body = JSON.parse(Buffer.concat(chunks).toString());
-    const usuario = body.usuario || body.username || '';
+    let usuario = body.usuario || body.username || '';
+    if (usuario && !usuario.startsWith('@')) usuario = '@' + usuario;
     const tipo = body.tipo || 'Manual';
 
     const now = new Date().toLocaleString('en-CA', {
