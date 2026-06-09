@@ -273,11 +273,10 @@ async function loadAll() {
 }
 
 function updateStats() {
-  const filtered = allLeads.filter(l => inRange(l.fecha, l.fechaResp));
-  const outbounds = filtered.filter(l => inRangeSimple(l.fecha)).length;
-  const pending = filtered.filter(l => l.status==='Pendiente').length;
-  const replied = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||l.fecha)).length;
-  const fu = allLeads.filter(l => l.status==='Follow-up' && inRangeSimple(l.fechaResp||l.fecha)).length;
+  const outbounds = allLeads.filter(l => inRangeSimple(l.fecha)).length;
+  const pending = allLeads.filter(l => l.status==='Pendiente' && inRangeSimple(l.fecha)).length;
+  const replied = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||'')).length;
+  const fu = allLeads.filter(l => l.status==='Follow-up' && inRangeSimple(l.fechaResp||'')).length;
   const pct = Math.min(100, Math.round((outbounds/70)*100));
   document.getElementById('totalCount').textContent = outbounds;
   document.getElementById('pendingCount').textContent = pending;
@@ -297,7 +296,7 @@ function updateStats() {
 }
 
 function renderLeads() {
-  let list = allLeads.filter(l => inRange(l.fecha, l.fechaResp));
+  let list = allLeads.filter(l => inRangeSimple(l.fecha) || (l.fechaResp && inRangeSimple(l.fechaResp)));
   if (leadFilter !== 'all') list = list.filter(l => l.status === leadFilter);
   if (!list.length) { document.getElementById('leadsList').innerHTML = '<div class="empty">No hay leads en este período</div>'; return; }
   let html = '', lastDate = '';
