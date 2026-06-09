@@ -15,6 +15,13 @@ module.exports = async (req, res) => {
 
     const { recordId, status } = JSON.parse(Buffer.concat(chunks).toString());
 
+    const now = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Costa_Rica' });
+
+    const fields = { Status: status };
+    if (status === 'Contestó' || status === 'Follow-up') {
+      fields['Fecha Respuesta'] = now;
+    }
+
     const r = await fetch(
       `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl9s489yXa9fHA8h/${recordId}`,
       {
@@ -23,7 +30,7 @@ module.exports = async (req, res) => {
           Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ fields: { Status: status } }),
+        body: JSON.stringify({ fields }),
       }
     );
 
