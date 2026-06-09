@@ -7,18 +7,25 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a12; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
-  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px 24px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .header h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .header p { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 16px; }
-  .tabs { display: flex; gap: 4px; }
-  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px 10px 0 0; border: none; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); transition: all 0.2s; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 24px 16px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 12px; color: rgba(255,255,255,0.4); }
+  .date-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-bottom: 12px; }
+  .date-input { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .date-input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; cursor: pointer; }
+  .date-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .date-btn.active { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.4); color: #a78bfa; }
+  .date-sep { color: rgba(255,255,255,0.3); font-size: 12px; }
+  .tabs { display: flex; gap: 4px; margin-top: 4px; }
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px 10px 0 0; border: none; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
   .tab.active { background: #0a0a12; color: #fff; }
   .tab.outbound.active { color: #a78bfa; }
   .tab.followups.active { color: #38bdf8; }
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 20px 16px; }
-  .stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; text-align: center; }
-  .stat-number { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
-  .stat-label { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 16px 16px 0; }
+  .stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; text-align: center; }
+  .stat-number { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
   .stat-card.total .stat-number { color: #a78bfa; }
   .stat-card.pending .stat-number { color: #fb923c; }
   .stat-card.replied .stat-number { color: #4ade80; }
@@ -27,103 +34,110 @@
   .stat-card.fup-auto .stat-number { color: #818cf8; }
   .stat-card.fup-manual .stat-number { color: #f472b6; }
   .stat-card.fup-today .stat-number { color: #34d399; }
-  .progress-section { padding: 0 16px 20px; }
-  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .progress-title { font-size: 13px; color: rgba(255,255,255,0.6); font-weight: 500; }
-  .progress-pct { font-size: 13px; color: #a78bfa; font-weight: 700; }
-  .progress-bar { background: rgba(255,255,255,0.08); border-radius: 100px; height: 8px; overflow: hidden; }
+  .progress-section { padding: 12px 16px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .progress-title { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 500; }
+  .progress-pct { font-size: 12px; color: #a78bfa; font-weight: 700; }
+  .progress-bar { background: rgba(255,255,255,0.08); border-radius: 100px; height: 7px; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 100px; transition: width 0.8s ease; }
   .progress-fill.outbound { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
   .progress-fill.fup { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
-  .section-title { padding: 0 16px 12px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-  .refresh-btn { background: rgba(167,139,250,0.15); border: none; color: #a78bfa; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .section-title { padding: 0 16px 10px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+  .refresh-btn { background: rgba(167,139,250,0.15); border: none; color: #a78bfa; padding: 5px 10px; border-radius: 7px; font-size: 11px; cursor: pointer; font-weight: 600; }
   .refresh-btn.fup { background: rgba(56,189,248,0.15); color: #38bdf8; }
-  .refresh-btn:hover { opacity: 0.8; }
-  .leads-list { padding: 0 16px 100px; display: flex; flex-direction: column; gap: 8px; }
-  .lead-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; transition: all 0.2s; }
-  .lead-card:hover { background: rgba(255,255,255,0.07); transform: translateY(-1px); }
-  .avatar { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+  .leads-list { padding: 0 16px 80px; display: flex; flex-direction: column; gap: 7px; }
+  .lead-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+  .lead-card:hover { background: rgba(255,255,255,0.07); }
+  .avatar { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
   .avatar.pending { background: rgba(251,146,60,0.2); color: #fb923c; }
   .avatar.replied { background: rgba(74,222,128,0.2); color: #4ade80; }
   .avatar.followup { background: rgba(192,132,252,0.2); color: #c084fc; }
   .avatar.auto { background: rgba(129,140,248,0.2); color: #818cf8; }
   .avatar.manual { background: rgba(244,114,182,0.2); color: #f472b6; }
   .lead-info { flex: 1; min-width: 0; }
-  .lead-username { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 3px; text-decoration: none; display: block; }
+  .lead-username { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; text-decoration: none; display: block; }
   .lead-username:hover { color: #a78bfa; }
   .lead-meta { font-size: 11px; color: rgba(255,255,255,0.4); }
-  .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-  .status-badge.pending { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
-  .status-badge.replied { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
-  .status-badge.followup { background: rgba(192,132,252,0.15); color: #c084fc; border: 1px solid rgba(192,132,252,0.3); }
-  .status-badge.auto { background: rgba(129,140,248,0.15); color: #818cf8; border: 1px solid rgba(129,140,248,0.3); }
-  .status-badge.manual { background: rgba(244,114,182,0.15); color: #f472b6; border: 1px solid rgba(244,114,182,0.3); }
-  .filter-bar { display: flex; gap: 8px; padding: 0 16px 16px; overflow-x: auto; }
-  .filter-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 7px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 500; transition: all 0.2s; }
-  .filter-btn.active { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); color: #a78bfa; }
-  .filter-btn.fup-active { background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.5); color: #38bdf8; }
-  .loading { text-align: center; padding: 60px 20px; color: rgba(255,255,255,0.3); }
-  .spinner { width: 36px; height: 36px; border: 3px solid rgba(167,139,250,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-  .spinner.fup { border-color: rgba(56,189,248,0.2); border-top-color: #38bdf8; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .date-header { padding: 16px 16px 8px; font-size: 12px; color: rgba(255,255,255,0.3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-  .empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.3); font-size: 14px; }
-  .page { display: none; }
-  .page.active { display: block; }
-  .status-select { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid; cursor: pointer; flex-shrink: 0; background: transparent; outline: none; }
+  .status-select { padding: 4px 8px; border-radius: 16px; font-size: 11px; font-weight: 700; border: 1px solid; cursor: pointer; flex-shrink: 0; background: transparent; outline: none; }
   .status-select.pending { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
   .status-select.replied { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
   .status-select.followup { background: rgba(192,132,252,0.15); color: #c084fc; border-color: rgba(192,132,252,0.3); }
   .status-select option { background: #1a1a2e; color: #fff; }
+  .status-badge { padding: 4px 8px; border-radius: 16px; font-size: 11px; font-weight: 700; border: 1px solid; flex-shrink: 0; }
+  .status-badge.auto { background: rgba(129,140,248,0.15); color: #818cf8; border-color: rgba(129,140,248,0.3); }
+  .status-badge.manual { background: rgba(244,114,182,0.15); color: #f472b6; border-color: rgba(244,114,182,0.3); }
+  .filter-bar { display: flex; gap: 6px; padding: 0 16px 12px; overflow-x: auto; }
+  .filter-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 18px; font-size: 11px; cursor: pointer; white-space: nowrap; font-weight: 500; }
+  .filter-btn.active { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); color: #a78bfa; }
+  .filter-btn.fup-active { background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.5); color: #38bdf8; }
+  .loading { text-align: center; padding: 50px 20px; color: rgba(255,255,255,0.3); }
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(167,139,250,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  .spinner.fup { border-color: rgba(56,189,248,0.2); border-top-color: #38bdf8; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .date-header { padding: 14px 16px 6px; font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.3); font-size: 14px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .range-label { font-size: 12px; color: rgba(255,255,255,0.5); padding: 0 16px 8px; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>📊 Outbound Tracker</h1>
-  <p id="todayDate">Cargando...</p>
+  <div class="header-top">
+    <div>
+      <h1>📊 Outbound Tracker</h1>
+      <p id="todayDate"></p>
+    </div>
+  </div>
+  <div class="date-filter">
+    <button class="date-btn active" onclick="setQuick('today', this)">Hoy</button>
+    <button class="date-btn" onclick="setQuick('yesterday', this)">Ayer</button>
+    <button class="date-btn" onclick="setQuick('week', this)">Esta semana</button>
+    <button class="date-btn" onclick="setQuick('month', this)">Este mes</button>
+    <button class="date-btn" onclick="setQuick('all', this)">Todo</button>
+    <span class="date-sep">|</span>
+    <input type="date" class="date-input" id="dateFrom" onchange="setCustomRange()">
+    <span class="date-sep">→</span>
+    <input type="date" class="date-input" id="dateTo" onchange="setCustomRange()">
+  </div>
   <div class="tabs">
     <button class="tab outbound active" onclick="switchTab('outbound')">Outbound</button>
     <button class="tab followups" onclick="switchTab('followups')">Follow-ups</button>
   </div>
 </div>
 
-<!-- OUTBOUND PAGE -->
 <div class="page active" id="page-outbound">
   <div class="stats-grid">
-    <div class="stat-card total"><div class="stat-number" id="totalCount">0</div><div class="stat-label">Hoy</div></div>
-    <div class="stat-card pending"><div class="stat-number" id="pendingCount">0</div><div class="stat-label">Pendiente</div></div>
+    <div class="stat-card total"><div class="stat-number" id="totalCount">0</div><div class="stat-label">Outbounds</div></div>
+    <div class="stat-card pending"><div class="stat-number" id="pendingCount">0</div><div class="stat-label">Sin resp.</div></div>
     <div class="stat-card replied"><div class="stat-number" id="repliedCount">0</div><div class="stat-label">Contestó</div></div>
     <div class="stat-card followup"><div class="stat-number" id="followupCount">0</div><div class="stat-label">Follow-up</div></div>
   </div>
   <div class="progress-section">
     <div class="progress-header">
-      <span class="progress-title">Meta diaria: 70 outbounds</span>
+      <span class="progress-title" id="progressLabel">Meta diaria: 70 outbounds</span>
       <span class="progress-pct" id="progressPct">0%</span>
     </div>
     <div class="progress-bar"><div class="progress-fill outbound" id="progressFill" style="width:0%"></div></div>
   </div>
   <div class="section-title">
     <span>Leads</span>
-    <button class="refresh-btn" onclick="loadLeads()">↻ Actualizar</button>
+    <button class="refresh-btn" onclick="loadAll()">↻ Actualizar</button>
   </div>
   <div class="filter-bar">
-    <button class="filter-btn active" onclick="setFilter('all', this, 'outbound')">Todos</button>
-    <button class="filter-btn" onclick="setFilter('Pendiente', this, 'outbound')">Pendiente</button>
-    <button class="filter-btn" onclick="setFilter('Contestó', this, 'outbound')">Contestó</button>
-    <button class="filter-btn" onclick="setFilter('Follow-up', this, 'outbound')">Follow-up</button>
-    <button class="filter-btn" onclick="setFilter('today', this, 'outbound')">Hoy</button>
+    <button class="filter-btn active" onclick="setLeadFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setLeadFilter('Pendiente', this)">Sin resp.</button>
+    <button class="filter-btn" onclick="setLeadFilter('Contestó', this)">Contestó</button>
+    <button class="filter-btn" onclick="setLeadFilter('Follow-up', this)">Follow-up</button>
   </div>
-  <div class="leads-list" id="leadsList">
-    <div class="loading"><div class="spinner"></div>Cargando leads...</div>
-  </div>
+  <div class="leads-list" id="leadsList"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
 </div>
 
-<!-- FOLLOWUPS PAGE -->
 <div class="page" id="page-followups">
   <div class="stats-grid">
     <div class="stat-card fup-total"><div class="stat-number" id="fupTotal">0</div><div class="stat-label">Total</div></div>
-    <div class="stat-card fup-today"><div class="stat-number" id="fupToday">0</div><div class="stat-label">Hoy</div></div>
+    <div class="stat-card fup-today"><div class="stat-number" id="fupPeriod">0</div><div class="stat-label">En período</div></div>
     <div class="stat-card fup-auto"><div class="stat-number" id="fupAuto">0</div><div class="stat-label">Automático</div></div>
     <div class="stat-card fup-manual"><div class="stat-number" id="fupManual">0</div><div class="stat-label">Manual</div></div>
   </div>
@@ -136,200 +150,200 @@
   </div>
   <div class="section-title">
     <span>Follow-ups</span>
-    <button class="refresh-btn fup" onclick="loadFollowups()">↻ Actualizar</button>
+    <button class="refresh-btn fup" onclick="loadAll()">↻ Actualizar</button>
   </div>
   <div class="filter-bar">
-    <button class="filter-btn fup-active" onclick="setFilter('all', this, 'followups')">Todos</button>
-    <button class="filter-btn" onclick="setFilter('Automático', this, 'followups')">Automático</button>
-    <button class="filter-btn" onclick="setFilter('Manual', this, 'followups')">Manual</button>
-    <button class="filter-btn" onclick="setFilter('today', this, 'followups')">Hoy</button>
+    <button class="filter-btn fup-active" onclick="setFupFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setFupFilter('Automático', this)">Automático</button>
+    <button class="filter-btn" onclick="setFupFilter('Manual', this)">Manual</button>
   </div>
-  <div class="leads-list" id="fupList">
-    <div class="loading"><div class="spinner fup"></div>Cargando follow-ups...</div>
-  </div>
+  <div class="leads-list" id="fupList"><div class="loading"><div class="spinner fup"></div>Cargando...</div></div>
 </div>
 
 <script>
-const AIRTABLE_TOKEN = 'patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34';
+const TOKEN = 'patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34';
 const BASE = 'appiyrgAQxpLTDP36';
-const LEADS_TABLE = 'tbl9s489yXa9fHA8h';
-const FUPS_TABLE = 'tblDNB4KHlcOlFL7t';
+const LEADS = 'tbl9s489yXa9fHA8h';
+const FUPS = 'tblDNB4KHlcOlFL7t';
 
 let allLeads = [], allFups = [];
-let currentLeadFilter = 'all', currentFupFilter = 'all';
-let currentTab = 'outbound';
+let leadFilter = 'all', fupFilter = 'all';
+let dateFrom = '', dateTo = '';
 
-function todayStr() {
-  return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
+function todayStr() { return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}); }
+function yesterdayStr() { return new Date(Date.now()-86400000).toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}); }
+function weekStart() {
+  const d = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Costa_Rica'}));
+  d.setDate(d.getDate() - d.getDay());
+  return d.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
+}
+function monthStart() {
+  const d = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Costa_Rica'}));
+  d.setDate(1);
+  return d.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '';
+function setQuick(range, btn) {
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
   const today = todayStr();
-  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
-  if (dateStr === today) return 'Hoy';
-  if (dateStr === yesterday) return 'Ayer';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
+  if (range === 'today') { dateFrom = today; dateTo = today; }
+  else if (range === 'yesterday') { dateFrom = yesterdayStr(); dateTo = yesterdayStr(); }
+  else if (range === 'week') { dateFrom = weekStart(); dateTo = today; }
+  else if (range === 'month') { dateFrom = monthStart(); dateTo = today; }
+  else { dateFrom = ''; dateTo = ''; }
+  renderLeads(); renderFups(); updateStats();
 }
 
-function getInitials(username) {
-  return (username || '?').replace('@','').substring(0,2).toUpperCase();
+function setCustomRange() {
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  dateFrom = document.getElementById('dateFrom').value;
+  dateTo = document.getElementById('dateTo').value;
+  renderLeads(); renderFups(); updateStats();
 }
+
+function inRange(fecha, respFecha) {
+  if (!dateFrom && !dateTo) return true;
+  const from = dateFrom || '0000-00-00';
+  const to = dateTo || '9999-99-99';
+  return (fecha >= from && fecha <= to) || (respFecha && respFecha >= from && respFecha <= to);
+}
+
+function inRangeSimple(fecha) {
+  if (!dateFrom && !dateTo) return true;
+  const from = dateFrom || '0000-00-00';
+  const to = dateTo || '9999-99-99';
+  return fecha >= from && fecha <= to;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const today = todayStr(), yest = yesterdayStr();
+  if (d === today) return 'Hoy';
+  if (d === yest) return 'Ayer';
+  return new Date(d+'T00:00:00').toLocaleDateString('es', {weekday:'short', day:'numeric', month:'short'});
+}
+
+function getInitials(u) { return (u||'?').replace('@','').substring(0,2).toUpperCase(); }
 
 function switchTab(tab) {
-  currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector('.tab.' + tab).classList.add('active');
+  document.querySelector('.tab.'+tab).classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + tab).classList.add('active');
+  document.getElementById('page-'+tab).classList.add('active');
 }
 
-function setFilter(filter, btn, type) {
-  if (type === 'outbound') {
-    currentLeadFilter = filter;
-    document.querySelectorAll('#page-outbound .filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderLeads();
-  } else {
-    currentFupFilter = filter;
-    document.querySelectorAll('#page-followups .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('fup-active'); });
-    btn.classList.add('fup-active');
-    renderFups();
-  }
+function setLeadFilter(f, btn) {
+  leadFilter = f;
+  document.querySelectorAll('#page-outbound .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeads();
+}
+
+function setFupFilter(f, btn) {
+  fupFilter = f;
+  document.querySelectorAll('#page-followups .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('fup-active'); });
+  btn.classList.add('fup-active');
+  renderFups();
 }
 
 async function fetchAll(tableId) {
   let url = `https://api.airtable.com/v0/${BASE}/${tableId}?sort[0][field]=Fecha&sort[0][direction]=desc&sort[1][field]=Hora&sort[1][direction]=desc`;
   let records = [], offset = null;
   do {
-    const fullUrl = offset ? url + '&offset=' + offset : url;
-    const res = await fetch(fullUrl, { headers: { 'Authorization': 'Bearer ' + AIRTABLE_TOKEN } });
-    const data = await res.json();
-    records = records.concat(data.records || []);
-    offset = data.offset;
-  } while (offset);
+    const r = await fetch(offset ? url+'&offset='+offset : url, {headers:{'Authorization':'Bearer '+TOKEN}});
+    const d = await r.json();
+    records = records.concat(d.records||[]);
+    offset = d.offset;
+  } while(offset);
   return records;
 }
 
-
-async function updateStatus(recordId, select) {
-  const status = select.value;
-  const sc = status === 'Contestó' ? 'replied' : status === 'Follow-up' ? 'followup' : 'pending';
-  select.className = 'status-select ' + sc;
-  await fetch('https://outbound-tracker.vercel.app/api/update-status', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recordId, status })
-  });
+async function loadAll() {
+  document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
+  document.getElementById('fupList').innerHTML = '<div class="loading"><div class="spinner fup"></div>Cargando...</div>';
+  const [lr, fr] = await Promise.all([fetchAll(LEADS), fetchAll(FUPS)]);
+  allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
+  allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
+  updateStats(); renderLeads(); renderFups();
+  const now = new Date();
+  document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
 }
 
-async function loadLeads() {
-  document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando leads...</div>';
-  try {
-    const records = await fetchAll(LEADS_TABLE);
-    allLeads = records.map(r => ({
-      id: r.id,
-      username: r.fields.Usuario || '',
-      fecha: r.fields.Fecha || '',
-      hora: r.fields.Hora || '',
-      status: r.fields.Status || 'Pendiente'
-    }));
-    updateLeadStats();
-    renderLeads();
-  } catch(e) {
-    document.getElementById('leadsList').innerHTML = '<div class="empty">Error cargando datos.</div>';
-  }
-}
-
-async function loadFollowups() {
-  document.getElementById('fupList').innerHTML = '<div class="loading"><div class="spinner fup"></div>Cargando follow-ups...</div>';
-  try {
-    const records = await fetchAll(FUPS_TABLE);
-    allFups = records.map(r => ({
-      id: r.id,
-      username: r.fields.Usuario || '',
-      fecha: r.fields.Fecha || '',
-      hora: r.fields.Hora || '',
-      tipo: r.fields.Tipo || 'Manual'
-    }));
-    updateFupStats();
-    renderFups();
-  } catch(e) {
-    document.getElementById('fupList').innerHTML = '<div class="empty">Error cargando datos.</div>';
-  }
-}
-
-function updateLeadStats() {
-  const today = todayStr();
-  const todayLeads = allLeads.filter(l => l.fecha === today);
-  const total = todayLeads.length;
-  const pending = allLeads.filter(l => l.status === 'Pendiente').length;
-  const replied = allLeads.filter(l => l.status === 'Contestó').length;
-  const followup = allLeads.filter(l => l.status === 'Follow-up').length;
-  const pct = Math.min(100, Math.round((total / 70) * 100));
-  document.getElementById('totalCount').textContent = total;
+function updateStats() {
+  const filtered = allLeads.filter(l => inRange(l.fecha, l.fechaResp));
+  const outbounds = filtered.filter(l => inRangeSimple(l.fecha)).length;
+  const pending = filtered.filter(l => l.status==='Pendiente').length;
+  const replied = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||l.fecha)).length;
+  const fu = allLeads.filter(l => l.status==='Follow-up' && inRangeSimple(l.fechaResp||l.fecha)).length;
+  const pct = Math.min(100, Math.round((outbounds/70)*100));
+  document.getElementById('totalCount').textContent = outbounds;
   document.getElementById('pendingCount').textContent = pending;
   document.getElementById('repliedCount').textContent = replied;
-  document.getElementById('followupCount').textContent = followup;
-  document.getElementById('progressPct').textContent = pct + '%';
-  document.getElementById('progressFill').style.width = pct + '%';
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
-  document.getElementById('todayDate').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-}
+  document.getElementById('followupCount').textContent = fu;
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('progressFill').style.width = pct+'%';
 
-function updateFupStats() {
-  const today = todayStr();
-  const total = allFups.length;
-  const todayFups = allFups.filter(f => f.fecha === today).length;
-  const auto = allFups.filter(f => f.tipo === 'Automático').length;
-  const manual = allFups.filter(f => f.tipo === 'Manual').length;
-  const pct = Math.min(100, Math.round((todayFups / 30) * 100));
-  document.getElementById('fupTotal').textContent = total;
-  document.getElementById('fupToday').textContent = todayFups;
-  document.getElementById('fupAuto').textContent = auto;
-  document.getElementById('fupManual').textContent = manual;
-  document.getElementById('fupProgressPct').textContent = pct + '%';
-  document.getElementById('fupProgressFill').style.width = pct + '%';
+  const fupFiltered = allFups.filter(f => inRangeSimple(f.fecha));
+  document.getElementById('fupTotal').textContent = allFups.length;
+  document.getElementById('fupPeriod').textContent = fupFiltered.length;
+  document.getElementById('fupAuto').textContent = fupFiltered.filter(f=>f.tipo==='Automático').length;
+  document.getElementById('fupManual').textContent = fupFiltered.filter(f=>f.tipo==='Manual').length;
+  const fupPct = Math.min(100, Math.round((fupFiltered.length/30)*100));
+  document.getElementById('fupProgressPct').textContent = fupPct+'%';
+  document.getElementById('fupProgressFill').style.width = fupPct+'%';
 }
 
 function renderLeads() {
-  const today = todayStr();
-  let filtered = allLeads;
-  if (currentLeadFilter === 'today') filtered = allLeads.filter(l => l.fecha === today);
-  else if (currentLeadFilter !== 'all') filtered = allLeads.filter(l => l.status === currentLeadFilter);
-  if (filtered.length === 0) { document.getElementById('leadsList').innerHTML = '<div class="empty">No hay leads con este filtro</div>'; return; }
+  let list = allLeads.filter(l => inRange(l.fecha, l.fechaResp));
+  if (leadFilter !== 'all') list = list.filter(l => l.status === leadFilter);
+  if (!list.length) { document.getElementById('leadsList').innerHTML = '<div class="empty">No hay leads en este período</div>'; return; }
   let html = '', lastDate = '';
-  filtered.forEach(lead => {
-    if (lead.fecha !== lastDate) { html += `<div class="date-header">${formatDate(lead.fecha)}</div>`; lastDate = lead.fecha; }
-    const sc = lead.status === 'Contestó' ? 'replied' : lead.status === 'Follow-up' ? 'followup' : 'pending';
-    const label = lead.status === 'Contestó' ? 'Contestó' : lead.status === 'Follow-up' ? 'Follow-up' : 'Sin resp.';
-    const igUrl = `https://www.instagram.com/${(lead.username||'').replace('@','')}/`;
-    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(lead.username)}</div><div class="lead-info"><a href="${igUrl}" target="_blank" class="lead-username">${lead.username} <span style="font-size:10px;opacity:0.4">↗</span></a><div class="lead-meta">${lead.fecha}${lead.hora ? ' · ' + lead.hora : ''}</div></div><select class="status-select ${sc}" onchange="updateStatus('${lead.id}', this)"><option value="Pendiente" ${lead.status==='Pendiente'?'selected':''}>Sin resp.</option><option value="Contestó" ${lead.status==='Contestó'?'selected':''}>Contestó</option><option value="Follow-up" ${lead.status==='Follow-up'?'selected':''}>Follow-up</option></select></div>`;
+  list.forEach(l => {
+    const dateKey = l.fecha;
+    if (dateKey !== lastDate) { html += `<div class="date-header">${formatDate(dateKey)}</div>`; lastDate = dateKey; }
+    const sc = l.status==='Contestó'?'replied':l.status==='Follow-up'?'followup':'pending';
+    const ig = `https://www.instagram.com/${(l.username||'').replace('@','')}/`;
+    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(l.username)}</div><div class="lead-info"><a href="${ig}" target="_blank" class="lead-username">${l.username} <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">${l.fecha}${l.hora?' · '+l.hora:''}${l.fechaResp?' · Resp: '+l.fechaResp:''}</div></div><select class="status-select ${sc}" onchange="updateStatus('${l.id}', this)"><option value="Pendiente" ${l.status==='Pendiente'?'selected':''}>Sin resp.</option><option value="Contestó" ${l.status==='Contestó'?'selected':''}>Contestó</option><option value="Follow-up" ${l.status==='Follow-up'?'selected':''}>Follow-up</option></select></div>`;
   });
   document.getElementById('leadsList').innerHTML = html;
 }
 
 function renderFups() {
-  const today = todayStr();
-  let filtered = allFups;
-  if (currentFupFilter === 'today') filtered = allFups.filter(f => f.fecha === today);
-  else if (currentFupFilter !== 'all') filtered = allFups.filter(f => f.tipo === currentFupFilter);
-  if (filtered.length === 0) { document.getElementById('fupList').innerHTML = '<div class="empty">No hay follow-ups con este filtro</div>'; return; }
+  let list = allFups.filter(f => inRangeSimple(f.fecha));
+  if (fupFilter !== 'all') list = list.filter(f => f.tipo === fupFilter);
+  if (!list.length) { document.getElementById('fupList').innerHTML = '<div class="empty">No hay follow-ups en este período</div>'; return; }
   let html = '', lastDate = '';
-  filtered.forEach(fup => {
-    if (fup.fecha !== lastDate) { html += `<div class="date-header">${formatDate(fup.fecha)}</div>`; lastDate = fup.fecha; }
-    const sc = fup.tipo === 'Automático' ? 'auto' : 'manual';
-    const igUrl = `https://www.instagram.com/${(fup.username||'').replace('@','')}/`;
-    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(fup.username)}</div><div class="lead-info"><a href="${igUrl}" target="_blank" class="lead-username">${fup.username} <span style="font-size:10px;opacity:0.4">↗</span></a><div class="lead-meta">${fup.fecha}${fup.hora ? ' · ' + fup.hora : ''}</div></div><div class="status-badge ${sc}">${fup.tipo}</div></div>`;
+  list.forEach(f => {
+    if (f.fecha !== lastDate) { html += `<div class="date-header">${formatDate(f.fecha)}</div>`; lastDate = f.fecha; }
+    const sc = f.tipo==='Automático'?'auto':'manual';
+    const ig = `https://www.instagram.com/${(f.username||'').replace('@','')}/`;
+    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(f.username)}</div><div class="lead-info"><a href="${ig}" target="_blank" class="lead-username">${f.username} <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">${f.fecha}${f.hora?' · '+f.hora:''}</div></div><div class="status-badge ${sc}">${f.tipo}</div></div>`;
   });
   document.getElementById('fupList').innerHTML = html;
 }
 
-loadLeads();
-loadFollowups();
-setInterval(() => { loadLeads(); loadFollowups(); }, 30000);
+async function updateStatus(recordId, select) {
+  const status = select.value;
+  const sc = status==='Contestó'?'replied':status==='Follow-up'?'followup':'pending';
+  select.className = 'status-select '+sc;
+  const lead = allLeads.find(l=>l.id===recordId);
+  if (lead) { lead.status = status; if (status!=='Pendiente') lead.fechaResp = todayStr(); }
+  updateStats();
+  await fetch('https://outbound-tracker.vercel.app/api/update-status', {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({recordId, status})
+  });
+}
+
+const today = todayStr();
+dateFrom = today; dateTo = today;
+document.getElementById('dateFrom').value = today;
+document.getElementById('dateTo').value = today;
+loadAll();
+setInterval(loadAll, 60000);
 </script>
 </body>
 </html>
