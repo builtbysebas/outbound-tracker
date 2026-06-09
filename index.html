@@ -70,6 +70,11 @@
   .empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.3); font-size: 14px; }
   .page { display: none; }
   .page.active { display: block; }
+  .status-select { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid; cursor: pointer; flex-shrink: 0; background: transparent; outline: none; }
+  .status-select.pending { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .status-select.replied { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .status-select.followup { background: rgba(192,132,252,0.15); color: #c084fc; border-color: rgba(192,132,252,0.3); }
+  .status-select option { background: #1a1a2e; color: #fff; }
 </style>
 </head>
 <body>
@@ -207,6 +212,18 @@ async function fetchAll(tableId) {
   return records;
 }
 
+
+async function updateStatus(recordId, select) {
+  const status = select.value;
+  const sc = status === 'Contestó' ? 'replied' : status === 'Follow-up' ? 'followup' : 'pending';
+  select.className = 'status-select ' + sc;
+  await fetch('https://outbound-tracker.vercel.app/api/update-status', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recordId, status })
+  });
+}
+
 async function loadLeads() {
   document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando leads...</div>';
   try {
@@ -289,7 +306,7 @@ function renderLeads() {
     const sc = lead.status === 'Contestó' ? 'replied' : lead.status === 'Follow-up' ? 'followup' : 'pending';
     const label = lead.status === 'Contestó' ? 'Contestó' : lead.status === 'Follow-up' ? 'Follow-up' : 'Sin resp.';
     const igUrl = `https://www.instagram.com/${(lead.username||'').replace('@','')}/`;
-    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(lead.username)}</div><div class="lead-info"><a href="${igUrl}" target="_blank" class="lead-username">${lead.username} <span style="font-size:10px;opacity:0.4">↗</span></a><div class="lead-meta">${lead.fecha}${lead.hora ? ' · ' + lead.hora : ''}</div></div><div class="status-badge ${sc}">${label}</div></div>`;
+    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(lead.username)}</div><div class="lead-info"><a href="${igUrl}" target="_blank" class="lead-username">${lead.username} <span style="font-size:10px;opacity:0.4">↗</span></a><div class="lead-meta">${lead.fecha}${lead.hora ? ' · ' + lead.hora : ''}</div></div><select class="status-select ${sc}" onchange="updateStatus('${lead.id}', this)"><option value="Pendiente" ${lead.status==='Pendiente'?'selected':''}>Sin resp.</option><option value="Contestó" ${lead.status==='Contestó'?'selected':''}>Contestó</option><option value="Follow-up" ${lead.status==='Follow-up'?'selected':''}>Follow-up</option></select></div>`;
   });
   document.getElementById('leadsList').innerHTML = html;
 }
