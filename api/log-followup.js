@@ -1,4 +1,12 @@
 module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -13,7 +21,7 @@ module.exports = async (req, res) => {
 
     const body = JSON.parse(Buffer.concat(chunks).toString());
     const usuario = body.usuario || body.username || '';
-    const tipo = body.tipo || 'Automático';
+    const tipo = body.tipo || 'Manual';
 
     const now = new Date().toLocaleString('en-CA', {
       timeZone: 'America/Costa_Rica',
