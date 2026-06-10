@@ -92,6 +92,19 @@
   .status-badge.inb-replied { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
   .status-badge.inb-no { background: rgba(248,113,113,0.15); color: #f87171; border-color: rgba(248,113,113,0.3); }
   .refresh-btn.inb { background: rgba(52,211,153,0.15); color: #34d399; }
+  .tab.llamadas.active { color: #fbbf24; }
+  .stat-card.ll-total .stat-number { color: #fbbf24; }
+  .stat-card.ll-prop .stat-number { color: #fb923c; }
+  .stat-card.ll-link .stat-number { color: #60a5fa; }
+  .stat-card.ll-agend .stat-number { color: #4ade80; }
+  .avatar.ll-prop { background: rgba(251,146,60,0.2); color: #fb923c; }
+  .avatar.ll-link { background: rgba(96,165,250,0.2); color: #60a5fa; }
+  .avatar.ll-agend { background: rgba(74,222,128,0.2); color: #4ade80; }
+  .status-badge.ll-prop { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .status-badge.ll-link { background: rgba(96,165,250,0.15); color: #60a5fa; border-color: rgba(96,165,250,0.3); }
+  .status-badge.ll-agend { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .refresh-btn.ll { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .filter-btn.ll-active { background: rgba(251,191,36,0.2); border-color: rgba(251,191,36,0.5); color: #fbbf24; }
 </style>
 </head>
 <body>
@@ -118,6 +131,7 @@
     <button class="tab outbound active" onclick="switchTab('outbound')">Outbound</button>
     <button class="tab followups" onclick="switchTab('followups')">Follow-ups</button>
     <button class="tab inbounds" onclick="switchTab('inbounds')">Inbounds</button>
+    <button class="tab llamadas" onclick="switchTab('llamadas')">Llamadas</button>
   </div>
 </div>
 
@@ -202,15 +216,44 @@
   </div>
   <div class="leads-list" id="inbList"><div class="loading"><div class="spinner" style="border-top-color:#34d399"></div>Cargando...</div></div>
 </div>
+
+<!-- LLAMADAS PAGE -->
+<div class="page" id="page-llamadas">
+  <div class="stats-grid">
+    <div class="stat-card ll-total"><div class="stat-number" id="llTotal">0</div><div class="stat-label">Total</div></div>
+    <div class="stat-card ll-prop"><div class="stat-number" id="llProp">0</div><div class="stat-label">Propuestas</div></div>
+    <div class="stat-card ll-link"><div class="stat-number" id="llLink">0</div><div class="stat-label">Link enviado</div></div>
+    <div class="stat-card ll-agend"><div class="stat-number" id="llAgend">0</div><div class="stat-label">Agendadas</div></div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Tasa de cierre</span>
+      <span class="progress-pct" id="llPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="llFill" style="width:0%;background:linear-gradient(90deg,#d97706,#fbbf24)"></div></div>
+  </div>
+  <div class="section-title">
+    <span>Llamadas</span>
+    <button class="refresh-btn ll" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn ll-active" onclick="setLlFilter('all', this)">Todas</button>
+    <button class="filter-btn" onclick="setLlFilter('Propuesta', this)">Propuesta</button>
+    <button class="filter-btn" onclick="setLlFilter('Link Enviado', this)">Link enviado</button>
+    <button class="filter-btn" onclick="setLlFilter('Agendada', this)">Agendada</button>
+  </div>
+  <div class="leads-list" id="llList"><div class="loading"><div class="spinner" style="border-top-color:#fbbf24"></div>Cargando...</div></div>
+</div>
 <script>
 const TOKEN = 'patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34';
 const BASE = 'appiyrgAQxpLTDP36';
 const LEADS = 'tbl9s489yXa9fHA8h';
 const FUPS = 'tblDNB4KHlcOlFL7t';
 const INBOUNDS = 'tblgb441T075rTSQq';
+const LLAMADAS = 'tbl4HjdJL8RTc1X77';
 
-let allLeads = [], allFups = [], allInbounds = [];
-let leadFilter = 'all', fupFilter = 'all', inbFilter = 'all';
+let allLeads = [], allFups = [], allInbounds = [], allLlamadas = [];
+let leadFilter = 'all', fupFilter = 'all', inbFilter = 'all', llFilter = 'all';
 let dateFrom = '', dateTo = '';
 
 function todayStr() { return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}); }
@@ -278,6 +321,13 @@ function switchTab(tab) {
   document.getElementById('page-'+tab).classList.add('active');
 }
 
+function setLlFilter(f, btn) {
+  llFilter = f;
+  document.querySelectorAll('#page-llamadas .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('ll-active'); });
+  btn.classList.add('ll-active');
+  renderLlamadas();
+}
+
 function setInbFilter(f, btn) {
   inbFilter = f;
   document.querySelectorAll('#page-inbounds .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('inb-active'); });
@@ -314,11 +364,12 @@ async function fetchAll(tableId) {
 async function loadAll() {
   document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
   document.getElementById('fupList').innerHTML = '<div class="loading"><div class="spinner fup"></div>Cargando...</div>';
-  const [lr, fr, ir] = await Promise.all([fetchAll(LEADS), fetchAll(FUPS), fetchAll(INBOUNDS)]);
+  const [lr, fr, ir, llr] = await Promise.all([fetchAll(LEADS), fetchAll(FUPS), fetchAll(INBOUNDS), fetchAll(LLAMADAS)]);
   allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
   allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
   allInbounds = ir.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
-  updateStats(); renderLeads(); renderFups(); renderInbounds();
+  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta', fechaAct:r.fields['Fecha Actualización']||''}));
+  updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas();
   const now = new Date();
   document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
 }
@@ -354,6 +405,16 @@ function updateStats() {
   document.getElementById('inbNo').textContent = inbFiltered.filter(i=>i.status==='No contestó').length;
   document.getElementById('inbPct').textContent = inbPct+'%';
   document.getElementById('inbFill').style.width = inbPct+'%';
+
+  const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha));
+  const llAgend = llFiltered.filter(l => l.status==='Agendada').length;
+  const llPct = llFiltered.length ? Math.round((llAgend/llFiltered.length)*100) : 0;
+  document.getElementById('llTotal').textContent = llFiltered.length;
+  document.getElementById('llProp').textContent = llFiltered.filter(l=>l.status==='Propuesta').length;
+  document.getElementById('llLink').textContent = llFiltered.filter(l=>l.status==='Link Enviado').length;
+  document.getElementById('llAgend').textContent = llAgend;
+  document.getElementById('llPct').textContent = llPct+'%';
+  document.getElementById('llFill').style.width = llPct+'%';
 }
 
 function renderLeads() {
@@ -383,6 +444,20 @@ function renderFups() {
     html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(f.username)}</div><div class="lead-info"><a href="${ig}" target="_blank" class="lead-username">${f.username} <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">${f.fecha}${f.hora?' · '+f.hora:''}</div></div><div class="status-badge ${sc}">${f.tipo}</div></div>`;
   });
   document.getElementById('fupList').innerHTML = html;
+}
+
+function renderLlamadas() {
+  let list = allLlamadas.filter(l => inRangeSimple(l.fecha));
+  if (llFilter !== 'all') list = list.filter(l => l.status === llFilter);
+  if (!list.length) { document.getElementById('llList').innerHTML = '<div class="empty">No hay llamadas en este período</div>'; return; }
+  let html = '', lastDate = '';
+  list.forEach(l => {
+    if (l.fecha !== lastDate) { html += '<div class="date-header">'+formatDate(l.fecha)+'</div>'; lastDate = l.fecha; }
+    const sc = l.status==='Agendada'?'ll-agend':l.status==='Link Enviado'?'ll-link':'ll-prop';
+    const ig = 'https://www.instagram.com/'+(l.username||'').replace('@','')+'/';
+    html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(l.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+l.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+l.fecha+(l.hora?' · '+l.hora:'')+(l.fechaAct?' · Act: '+l.fechaAct:'')+'</div></div><div class="status-badge '+sc+'">'+l.status+'</div></div>';
+  });
+  document.getElementById('llList').innerHTML = html;
 }
 
 function renderInbounds() {
