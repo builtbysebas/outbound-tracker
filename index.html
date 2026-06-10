@@ -397,12 +397,14 @@ function updateStats() {
   document.getElementById('fupProgressFill').style.width = fupPct+'%';
 
   const inbFiltered = allInbounds.filter(f => inRangeSimple(f.fecha));
-  const inbReplied = inbFiltered.filter(i => i.status==='Contestó').length;
+  const inbReplied = allInbounds.filter(i => i.status==='Contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const inbNo = allInbounds.filter(i => i.status==='No contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const inbPending = inbFiltered.filter(i=>i.status==='Pendiente').length;
   const inbPct = inbFiltered.length ? Math.round((inbReplied/inbFiltered.length)*100) : 0;
   document.getElementById('inbTotal').textContent = inbFiltered.length;
-  document.getElementById('inbPending').textContent = inbFiltered.filter(i=>i.status==='Pendiente').length;
+  document.getElementById('inbPending').textContent = inbPending;
   document.getElementById('inbReplied').textContent = inbReplied;
-  document.getElementById('inbNo').textContent = inbFiltered.filter(i=>i.status==='No contestó').length;
+  document.getElementById('inbNo').textContent = inbNo;
   document.getElementById('inbPct').textContent = inbPct+'%';
   document.getElementById('inbFill').style.width = inbPct+'%';
 
