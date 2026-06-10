@@ -368,7 +368,7 @@ async function loadAll() {
   allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
   allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
   allInbounds = ir.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
-  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta', fechaAct:r.fields['Fecha Actualización']||''}));
+  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta', fechaAct:r.fields['Fecha Actualización']||'', propuesta:r.fields['Propuesta']||0, linkEnviado:r.fields['Link Enviado']||0, agendada:r.fields['Agendada']||0}));
   updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas();
   const now = new Date();
   document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
@@ -407,11 +407,13 @@ function updateStats() {
   document.getElementById('inbFill').style.width = inbPct+'%';
 
   const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha));
-  const llAgend = llFiltered.filter(l => l.status==='Agendada').length;
-  const llPct = llFiltered.length ? Math.round((llAgend/llFiltered.length)*100) : 0;
+  const llProp = llFiltered.reduce((s,l) => s + l.propuesta, 0);
+  const llLink = llFiltered.reduce((s,l) => s + l.linkEnviado, 0);
+  const llAgend = llFiltered.reduce((s,l) => s + l.agendada, 0);
+  const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
   document.getElementById('llTotal').textContent = llFiltered.length;
-  document.getElementById('llProp').textContent = llFiltered.filter(l=>l.status==='Propuesta').length;
-  document.getElementById('llLink').textContent = llFiltered.filter(l=>l.status==='Link Enviado').length;
+  document.getElementById('llProp').textContent = llProp;
+  document.getElementById('llLink').textContent = llLink;
   document.getElementById('llAgend').textContent = llAgend;
   document.getElementById('llPct').textContent = llPct+'%';
   document.getElementById('llFill').style.width = llPct+'%';
