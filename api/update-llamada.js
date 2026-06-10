@@ -22,7 +22,6 @@ module.exports = async (req, res) => {
 
     const now = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Costa_Rica' });
 
-    // Find most recent record that's not yet at this status
     const search = await fetch(
       `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77?filterByFormula={Usuario}="${usuario}"&sort[0][field]=Fecha&sort[0][direction]=desc&sort[1][field]=Hora&sort[1][direction]=desc&maxRecords=1`,
       { headers: { Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34' } }
@@ -32,6 +31,11 @@ module.exports = async (req, res) => {
     const record = searchData.records?.[0];
     if (!record) return res.status(404).json({ error: 'No record found for this user' });
 
+    // Build fields — always set Status, always set the corresponding numeric field to 1
+    const fields = { Status: status, 'Fecha Actualización': now };
+    if (status === 'Link Enviado') fields['Link Enviado'] = 1;
+    if (status === 'Agendada') fields['Agendada'] = 1;
+
     await fetch(
       `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77/${record.id}`,
       {
@@ -40,7 +44,7 @@ module.exports = async (req, res) => {
           Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ fields: { Status: status, 'Fecha Actualización': now } })
+        body: JSON.stringify({ fields })
       }
     );
 
