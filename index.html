@@ -408,8 +408,8 @@ function updateStats() {
   document.getElementById('inbPct').textContent = inbPct+'%';
   document.getElementById('inbFill').style.width = inbPct+'%';
 
-  const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha));
-  const llProp = llFiltered.reduce((s,l) => s + l.propuesta, 0);
+  const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha) || (l.fechaAct && inRangeSimple(l.fechaAct)));
+  const llProp = allLlamadas.filter(l => l.propuesta && inRangeSimple(l.fecha)).reduce((s,l) => s + l.propuesta, 0);
   const llLink = allLlamadas.filter(l => l.linkEnviado && inRangeSimple(l.fechaAct||l.fecha)).reduce((s,l) => s + l.linkEnviado, 0);
   const llAgend = allLlamadas.filter(l => l.agendada && inRangeSimple(l.fechaAct||l.fecha)).reduce((s,l) => s + l.agendada, 0);
   const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
