@@ -368,7 +368,7 @@ async function loadAll() {
   allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
   allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
   allInbounds = ir.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
-  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta', fechaAct:r.fields['Fecha Actualización']||'', propuesta:r.fields['Propuesta']||0, linkEnviado:r.fields['Link Enviado']||0, agendada:r.fields['Agendada']||0}));
+  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta'}));
   updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas();
   const now = new Date();
   document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
@@ -408,10 +408,10 @@ function updateStats() {
   document.getElementById('inbPct').textContent = inbPct+'%';
   document.getElementById('inbFill').style.width = inbPct+'%';
 
-  const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha) || (l.fechaAct && inRangeSimple(l.fechaAct)));
-  const llProp = allLlamadas.filter(l => l.propuesta && inRangeSimple(l.fecha)).reduce((s,l) => s + l.propuesta, 0);
-  const llLink = allLlamadas.filter(l => l.linkEnviado && inRangeSimple(l.fechaAct||l.fecha)).reduce((s,l) => s + l.linkEnviado, 0);
-  const llAgend = allLlamadas.filter(l => l.agendada && inRangeSimple(l.fechaAct||l.fecha)).reduce((s,l) => s + l.agendada, 0);
+  const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha));
+  const llProp = llFiltered.filter(l => l.status==='Propuesta').length;
+  const llLink = llFiltered.filter(l => l.status==='Link Enviado').length;
+  const llAgend = llFiltered.filter(l => l.status==='Agendada').length;
   const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
   document.getElementById('llTotal').textContent = llFiltered.length;
   document.getElementById('llProp').textContent = llProp;
@@ -451,7 +451,7 @@ function renderFups() {
 }
 
 function renderLlamadas() {
-  let list = allLlamadas.filter(l => inRangeSimple(l.fecha) || (l.fechaAct && inRangeSimple(l.fechaAct)));
+  let list = allLlamadas.filter(l => inRangeSimple(l.fecha));
   if (llFilter !== 'all') list = list.filter(l => l.status === llFilter);
   if (!list.length) { document.getElementById('llList').innerHTML = '<div class="empty">No hay llamadas en este período</div>'; return; }
   let html = '', lastDate = '';
@@ -459,7 +459,7 @@ function renderLlamadas() {
     if (l.fecha !== lastDate) { html += '<div class="date-header">'+formatDate(l.fecha)+'</div>'; lastDate = l.fecha; }
     const sc = l.status==='Agendada'?'ll-agend':l.status==='Link Enviado'?'ll-link':'ll-prop';
     const ig = 'https://www.instagram.com/'+(l.username||'').replace('@','')+'/';
-    html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(l.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+l.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+l.fecha+(l.hora?' · '+l.hora:'')+(l.fechaAct?' · Act: '+l.fechaAct:'')+'</div></div><div class="status-badge '+sc+'">'+l.status+'</div></div>';
+    html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(l.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+l.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+l.fecha+(l.hora?' · '+l.hora:'')+'</div></div><div class="status-badge '+sc+'">'+l.status+'</div></div>';
   });
   document.getElementById('llList').innerHTML = html;
 }
