@@ -28,7 +28,7 @@ module.exports = async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        records: [{ fields: { Usuario: usuario, Fecha: fecha, Hora: hora, Status: 'Propuesta' } }]
+        records: [{ fields: { Usuario: usuario, Fecha: fecha, Hora: hora, Status: 'Propuesta', Propuesta: 1 } }]
       })
     });
 
