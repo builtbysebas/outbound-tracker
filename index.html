@@ -219,8 +219,7 @@
 
 <!-- LLAMADAS PAGE -->
 <div class="page" id="page-llamadas">
-  <div class="stats-grid">
-    <div class="stat-card ll-total"><div class="stat-number" id="llTotal">0</div><div class="stat-label">Total</div></div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
     <div class="stat-card ll-prop"><div class="stat-number" id="llProp">0</div><div class="stat-label">Propuestas</div></div>
     <div class="stat-card ll-link"><div class="stat-number" id="llLink">0</div><div class="stat-label">Link enviado</div></div>
     <div class="stat-card ll-agend"><div class="stat-number" id="llAgend">0</div><div class="stat-label">Agendadas</div></div>
@@ -413,7 +412,6 @@ function updateStats() {
   const llLink = llFiltered.filter(l => l.status==='Link Enviado').length;
   const llAgend = llFiltered.filter(l => l.status==='Agendada').length;
   const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
-  document.getElementById('llTotal').textContent = llFiltered.length;
   document.getElementById('llProp').textContent = llProp;
   document.getElementById('llLink').textContent = llLink;
   document.getElementById('llAgend').textContent = llAgend;
@@ -451,11 +449,24 @@ function renderFups() {
 }
 
 function renderLlamadas() {
+  const statusOrder = {'Propuesta':0,'Link Enviado':1,'Agendada':2};
   let list = allLlamadas.filter(l => inRangeSimple(l.fecha));
-  if (llFilter !== 'all') list = list.filter(l => l.status === llFilter);
-  if (!list.length) { document.getElementById('llList').innerHTML = '<div class="empty">No hay llamadas en este período</div>'; return; }
-  let html = '', lastDate = '';
+  
+  // Deduplicate: group by username, keep most advanced status, earliest date
+  const map = {};
   list.forEach(l => {
+    if (!map[l.username] || statusOrder[l.status] > statusOrder[map[l.username].status]) {
+      map[l.username] = l;
+    }
+  });
+  let deduped = Object.values(map);
+  
+  if (llFilter !== 'all') deduped = deduped.filter(l => l.status === llFilter);
+  deduped.sort((a,b) => (b.fecha+b.hora).localeCompare(a.fecha+a.hora));
+  
+  if (!deduped.length) { document.getElementById('llList').innerHTML = '<div class="empty">No hay llamadas en este período</div>'; return; }
+  let html = '', lastDate = '';
+  deduped.forEach(l => {
     if (l.fecha !== lastDate) { html += '<div class="date-header">'+formatDate(l.fecha)+'</div>'; lastDate = l.fecha; }
     const sc = l.status==='Agendada'?'ll-agend':l.status==='Link Enviado'?'ll-link':'ll-prop';
     const ig = 'https://www.instagram.com/'+(l.username||'').replace('@','')+'/';
