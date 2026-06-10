@@ -410,8 +410,8 @@ function updateStats() {
 
   const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha));
   const llProp = llFiltered.reduce((s,l) => s + l.propuesta, 0);
-  const llLink = llFiltered.reduce((s,l) => s + l.linkEnviado, 0);
-  const llAgend = llFiltered.reduce((s,l) => s + l.agendada, 0);
+  const llLink = allLlamadas.filter(l => l.linkEnviado && inRangeSimple(l.fechaAct||l.fecha)).reduce((s,l) => s + l.linkEnviado, 0);
+  const llAgend = allLlamadas.filter(l => l.agendada && inRangeSimple(l.fechaAct||l.fecha)).reduce((s,l) => s + l.agendada, 0);
   const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
   document.getElementById('llTotal').textContent = llFiltered.length;
   document.getElementById('llProp').textContent = llProp;
@@ -451,7 +451,7 @@ function renderFups() {
 }
 
 function renderLlamadas() {
-  let list = allLlamadas.filter(l => inRangeSimple(l.fecha));
+  let list = allLlamadas.filter(l => inRangeSimple(l.fecha) || (l.fechaAct && inRangeSimple(l.fechaAct)));
   if (llFilter !== 'all') list = list.filter(l => l.status === llFilter);
   if (!list.length) { document.getElementById('llList').innerHTML = '<div class="empty">No hay llamadas en este período</div>'; return; }
   let html = '', lastDate = '';
