@@ -20,35 +20,25 @@ module.exports = async (req, res) => {
 
     if (!status) return res.status(400).json({ error: 'Missing status' });
 
-    const now = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Costa_Rica' });
+    const now = new Date().toLocaleString('en-CA', { timeZone: 'America/Costa_Rica', hour12: false });
+    const [fecha, horaRaw] = now.split(', ');
+    const hora = horaRaw.substring(0, 5);
 
-    const search = await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77?filterByFormula={Usuario}="${usuario}"&sort[0][field]=Fecha&sort[0][direction]=desc&sort[1][field]=Hora&sort[1][direction]=desc&maxRecords=1`,
-      { headers: { Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34' } }
-    );
-
-    const searchData = await search.json();
-    const record = searchData.records?.[0];
-    if (!record) return res.status(404).json({ error: 'No record found for this user' });
-
-    // Build fields — always set Status, always set the corresponding numeric field to 1
-    const fields = { Status: status, 'Fecha Actualización': now };
+    const fields = { Usuario: usuario, Fecha: fecha, Hora: hora, Status: status };
     if (status === 'Link Enviado') fields['Link Enviado'] = 1;
     if (status === 'Agendada') fields['Agendada'] = 1;
 
-    await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77/${record.id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fields })
-      }
-    );
+    const r = await fetch('https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ records: [{ fields }] })
+    });
 
-    return res.status(200).json({ ok: true });
+    const data = await r.json();
+    return res.status(200).json({ ok: true, recordId: data.records?.[0]?.id || '' });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
