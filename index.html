@@ -69,6 +69,7 @@
   .filter-bar { display: flex; gap: 6px; padding: 0 16px 12px; overflow-x: auto; }
   .filter-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 18px; font-size: 11px; cursor: pointer; white-space: nowrap; font-weight: 500; }
   .filter-btn.active { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); color: #a78bfa; }
+  .filter-btn.inb-active { background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.5); color: #34d399; }
   .filter-btn.fup-active { background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.5); color: #38bdf8; }
   .loading { text-align: center; padding: 50px 20px; color: rgba(255,255,255,0.3); }
   .spinner { width: 32px; height: 32px; border: 3px solid rgba(167,139,250,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
@@ -79,6 +80,18 @@
   .page { display: none; }
   .page.active { display: block; }
   .range-label { font-size: 12px; color: rgba(255,255,255,0.5); padding: 0 16px 8px; }
+  .tab.inbounds.active { color: #34d399; }
+  .stat-card.inb-total .stat-number { color: #34d399; }
+  .stat-card.inb-pending .stat-number { color: #fb923c; }
+  .stat-card.inb-replied .stat-number { color: #4ade80; }
+  .stat-card.inb-no .stat-number { color: #f87171; }
+  .avatar.inb-pending { background: rgba(251,146,60,0.2); color: #fb923c; }
+  .avatar.inb-replied { background: rgba(74,222,128,0.2); color: #4ade80; }
+  .avatar.inb-no { background: rgba(248,113,113,0.2); color: #f87171; }
+  .status-badge.inb-pending { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .status-badge.inb-replied { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .status-badge.inb-no { background: rgba(248,113,113,0.15); color: #f87171; border-color: rgba(248,113,113,0.3); }
+  .refresh-btn.inb { background: rgba(52,211,153,0.15); color: #34d399; }
 </style>
 </head>
 <body>
@@ -104,6 +117,7 @@
   <div class="tabs">
     <button class="tab outbound active" onclick="switchTab('outbound')">Outbound</button>
     <button class="tab followups" onclick="switchTab('followups')">Follow-ups</button>
+    <button class="tab inbounds" onclick="switchTab('inbounds')">Inbounds</button>
   </div>
 </div>
 
@@ -160,14 +174,43 @@
   <div class="leads-list" id="fupList"><div class="loading"><div class="spinner fup"></div>Cargando...</div></div>
 </div>
 
+
+<!-- INBOUNDS PAGE -->
+<div class="page" id="page-inbounds">
+  <div class="stats-grid">
+    <div class="stat-card inb-total"><div class="stat-number" id="inbTotal">0</div><div class="stat-label">Total</div></div>
+    <div class="stat-card inb-pending"><div class="stat-number" id="inbPending">0</div><div class="stat-label">Pendiente</div></div>
+    <div class="stat-card inb-replied"><div class="stat-number" id="inbReplied">0</div><div class="stat-label">Contestó</div></div>
+    <div class="stat-card inb-no"><div class="stat-number" id="inbNo">0</div><div class="stat-label">No contestó</div></div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Tasa de conversión</span>
+      <span class="progress-pct" id="inbPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="inbFill" style="width:0%;background:linear-gradient(90deg,#059669,#34d399)"></div></div>
+  </div>
+  <div class="section-title">
+    <span>Inbounds</span>
+    <button class="refresh-btn inb" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn inb-active" onclick="setInbFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setInbFilter('Pendiente', this)">Pendiente</button>
+    <button class="filter-btn" onclick="setInbFilter('Contestó', this)">Contestó</button>
+    <button class="filter-btn" onclick="setInbFilter('No contestó', this)">No contestó</button>
+  </div>
+  <div class="leads-list" id="inbList"><div class="loading"><div class="spinner" style="border-top-color:#34d399"></div>Cargando...</div></div>
+</div>
 <script>
 const TOKEN = 'patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34';
 const BASE = 'appiyrgAQxpLTDP36';
 const LEADS = 'tbl9s489yXa9fHA8h';
 const FUPS = 'tblDNB4KHlcOlFL7t';
+const INBOUNDS = 'tblgb441T075rTSQq';
 
-let allLeads = [], allFups = [];
-let leadFilter = 'all', fupFilter = 'all';
+let allLeads = [], allFups = [], allInbounds = [];
+let leadFilter = 'all', fupFilter = 'all', inbFilter = 'all';
 let dateFrom = '', dateTo = '';
 
 function todayStr() { return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}); }
@@ -235,6 +278,13 @@ function switchTab(tab) {
   document.getElementById('page-'+tab).classList.add('active');
 }
 
+function setInbFilter(f, btn) {
+  inbFilter = f;
+  document.querySelectorAll('#page-inbounds .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('inb-active'); });
+  btn.classList.add('inb-active');
+  renderInbounds();
+}
+
 function setLeadFilter(f, btn) {
   leadFilter = f;
   document.querySelectorAll('#page-outbound .filter-btn').forEach(b => b.classList.remove('active'));
@@ -264,10 +314,11 @@ async function fetchAll(tableId) {
 async function loadAll() {
   document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
   document.getElementById('fupList').innerHTML = '<div class="loading"><div class="spinner fup"></div>Cargando...</div>';
-  const [lr, fr] = await Promise.all([fetchAll(LEADS), fetchAll(FUPS)]);
+  const [lr, fr, ir] = await Promise.all([fetchAll(LEADS), fetchAll(FUPS), fetchAll(INBOUNDS)]);
   allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
   allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
-  updateStats(); renderLeads(); renderFups();
+  allInbounds = ir.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
+  updateStats(); renderLeads(); renderFups(); renderInbounds();
   const now = new Date();
   document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
 }
@@ -293,6 +344,16 @@ function updateStats() {
   const fupPct = Math.min(100, Math.round((fupFiltered.length/30)*100));
   document.getElementById('fupProgressPct').textContent = fupPct+'%';
   document.getElementById('fupProgressFill').style.width = fupPct+'%';
+
+  const inbFiltered = allInbounds.filter(f => inRangeSimple(f.fecha));
+  const inbReplied = inbFiltered.filter(i => i.status==='Contestó').length;
+  const inbPct = inbFiltered.length ? Math.round((inbReplied/inbFiltered.length)*100) : 0;
+  document.getElementById('inbTotal').textContent = inbFiltered.length;
+  document.getElementById('inbPending').textContent = inbFiltered.filter(i=>i.status==='Pendiente').length;
+  document.getElementById('inbReplied').textContent = inbReplied;
+  document.getElementById('inbNo').textContent = inbFiltered.filter(i=>i.status==='No contestó').length;
+  document.getElementById('inbPct').textContent = inbPct+'%';
+  document.getElementById('inbFill').style.width = inbPct+'%';
 }
 
 function renderLeads() {
@@ -322,6 +383,20 @@ function renderFups() {
     html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(f.username)}</div><div class="lead-info"><a href="${ig}" target="_blank" class="lead-username">${f.username} <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">${f.fecha}${f.hora?' · '+f.hora:''}</div></div><div class="status-badge ${sc}">${f.tipo}</div></div>`;
   });
   document.getElementById('fupList').innerHTML = html;
+}
+
+function renderInbounds() {
+  let list = allInbounds.filter(f => inRangeSimple(f.fecha) || (f.fechaResp && inRangeSimple(f.fechaResp)));
+  if (inbFilter !== 'all') list = list.filter(f => f.status === inbFilter);
+  if (!list.length) { document.getElementById('inbList').innerHTML = '<div class="empty">No hay inbounds en este período</div>'; return; }
+  let html = '', lastDate = '';
+  list.forEach(f => {
+    if (f.fecha !== lastDate) { html += '<div class="date-header">'+formatDate(f.fecha)+'</div>'; lastDate = f.fecha; }
+    const sc = f.status==='Contestó'?'inb-replied':f.status==='No contestó'?'inb-no':'inb-pending';
+    const ig = 'https://www.instagram.com/'+(f.username||'').replace('@','')+'/';
+    html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(f.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+f.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+f.fecha+(f.hora?' · '+f.hora:'')+(f.fechaResp?' · Resp: '+f.fechaResp:'')+'</div></div><div class="status-badge '+sc+'">'+f.status+'</div></div>';
+  });
+  document.getElementById('inbList').innerHTML = html;
 }
 
 async function updateStatus(recordId, select) {
