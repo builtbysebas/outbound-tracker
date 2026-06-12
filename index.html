@@ -534,11 +534,12 @@ function updateReporte() {
   
   // Outbound del período
   const outbounds = allLeads.filter(l => inRangeSimple(l.fecha)).length;
-  const fups = allFups.filter(f => inRangeSimple(f.fecha)).length;
+  const fupsOut = allLeads.filter(l => l.status==='Follow-up' && inRangeSimple(l.fechaResp||'')).length;
   const respOut = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||'')).length;
   const inbounds = allInbounds.filter(i => i.status==='Contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const fups = allFups.filter(f => inRangeSimple(f.fecha)).length;
   const newConv = respOut + inbounds;
-  const newOut = outbounds + fups;
+  const newOut = outbounds + fupsOut;
 
   // Llamadas
   const llProp = allLlamadas.filter(l => l.status==='Propuesta' && inRangeSimple(l.fecha)).length;
