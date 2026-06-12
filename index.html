@@ -105,6 +105,18 @@
   .status-badge.ll-agend { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
   .refresh-btn.ll { background: rgba(251,191,36,0.15); color: #fbbf24; }
   .filter-btn.ll-active { background: rgba(251,191,36,0.2); border-color: rgba(251,191,36,0.5); color: #fbbf24; }
+  .tab.reporte.active { color: #fbbf24; }
+  .stat-card.ll-cal .stat-number { color: #4ade80; }
+  .stat-card.ll-desc .stat-number { color: #f87171; }
+  .stat-card.ll-pend .stat-number { color: #fb923c; }
+  .reporte-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 20px; margin: 0 16px 12px; }
+  .reporte-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+  .reporte-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .reporte-row:last-child { border-bottom: none; }
+  .reporte-label { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .reporte-value { font-size: 16px; font-weight: 800; color: #fff; }
+  .copy-btn { background: rgba(167,139,250,0.15); border: none; color: #a78bfa; padding: 8px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; margin: 0 16px 16px; width: calc(100% - 32px); }
+  .copy-btn:hover { background: rgba(167,139,250,0.25); }
 </style>
 </head>
 <body>
@@ -132,6 +144,7 @@
     <button class="tab followups" onclick="switchTab('followups')">Follow-ups</button>
     <button class="tab inbounds" onclick="switchTab('inbounds')">Inbounds</button>
     <button class="tab llamadas" onclick="switchTab('llamadas')">Llamadas</button>
+    <button class="tab reporte" onclick="switchTab('reporte')">📋 Reporte</button>
   </div>
 </div>
 
@@ -242,6 +255,33 @@
     <button class="filter-btn" onclick="setLlFilter('Agendada', this)">Agendada</button>
   </div>
   <div class="leads-list" id="llList"><div class="loading"><div class="spinner" style="border-top-color:#fbbf24"></div>Cargando...</div></div>
+</div>
+
+<!-- REPORTE PAGE -->
+<div class="page" id="page-reporte">
+  <div style="padding:12px 16px 0;font-size:12px;color:rgba(255,255,255,0.4)">Datos del período seleccionado arriba</div>
+  <div style="height:12px"></div>
+
+  <div class="reporte-box">
+    <div class="reporte-title">📱 Conversaciones</div>
+    <div class="reporte-row"><span class="reporte-label">Nuevas Conversaciones del Día</span><span class="reporte-value" id="rep-conv">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Nuevos Outbound</span><span class="reporte-value" id="rep-outbound">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Respuestas de Outbound</span><span class="reporte-value" id="rep-resp-out">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Nuevos Inbound</span><span class="reporte-value" id="rep-inbound">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Follow-ups</span><span class="reporte-value" id="rep-fups">0</span></div>
+  </div>
+
+  <div class="reporte-box">
+    <div class="reporte-title">📞 Llamadas</div>
+    <div class="reporte-row"><span class="reporte-label">Llamadas Propuestas</span><span class="reporte-value" id="rep-prop">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Links Enviados</span><span class="reporte-value" id="rep-link">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Llamadas Agendadas TOTALES</span><span class="reporte-value" id="rep-agend">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Llamadas Agendadas CALIFICADAS</span><span class="reporte-value" id="rep-cal">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Agendas Pendientes de Calificación</span><span class="reporte-value" id="rep-pend-cal">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Agendas DESCALIFICADAS</span><span class="reporte-value" id="rep-desc">0</span></div>
+  </div>
+
+  <button class="copy-btn" onclick="copyReporte()">📋 Copiar reporte</button>
 </div>
 <script>
 const TOKEN = 'patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34';
@@ -367,8 +407,8 @@ async function loadAll() {
   allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
   allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
   allInbounds = ir.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
-  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta'}));
-  updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas();
+  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta', calificacion:r.fields.Calificacion||'', fechaCal:r.fields['Fecha Calificacion']||''}));
+  updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas(); updateReporte();
   const now = new Date();
   document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
 }
@@ -487,6 +527,58 @@ function renderInbounds() {
     html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(f.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+f.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+f.fecha+(f.hora?' · '+f.hora:'')+(f.fechaResp?' · Resp: '+f.fechaResp:'')+'</div></div><div class="status-badge '+sc+'">'+f.status+'</div></div>';
   });
   document.getElementById('inbList').innerHTML = html;
+}
+
+function updateReporte() {
+  const today = todayStr();
+  
+  // Outbound del período
+  const outbounds = allLeads.filter(l => inRangeSimple(l.fecha)).length;
+  const fups = allFups.filter(f => inRangeSimple(f.fecha)).length;
+  const respOut = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||'')).length;
+  const inbounds = allInbounds.filter(i => i.status==='Contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const newConv = respOut + inbounds;
+  const newOut = outbounds + fups;
+
+  // Llamadas
+  const llProp = allLlamadas.filter(l => l.status==='Propuesta' && inRangeSimple(l.fecha)).length;
+  const llLink = allLlamadas.filter(l => l.status==='Link Enviado' && inRangeSimple(l.fecha)).length;
+  const llAgend = allLlamadas.filter(l => l.status==='Agendada' && inRangeSimple(l.fecha)).length;
+  const llCal = allLlamadas.filter(l => l.calificacion==='Calificada' && inRangeSimple(l.fechaCal||'')).length;
+  const llPendCal = allLlamadas.filter(l => l.calificacion==='Pendiente' && inRangeSimple(l.fechaCal||l.fecha)).length;
+  const llDesc = allLlamadas.filter(l => l.calificacion==='Descalificada' && inRangeSimple(l.fechaCal||'')).length;
+
+  document.getElementById('rep-conv').textContent = newConv;
+  document.getElementById('rep-outbound').textContent = newOut;
+  document.getElementById('rep-resp-out').textContent = respOut;
+  document.getElementById('rep-inbound').textContent = inbounds;
+  document.getElementById('rep-fups').textContent = fups;
+  document.getElementById('rep-prop').textContent = llProp;
+  document.getElementById('rep-link').textContent = llLink;
+  document.getElementById('rep-agend').textContent = llAgend;
+  document.getElementById('rep-cal').textContent = llCal;
+  document.getElementById('rep-pend-cal').textContent = llPendCal;
+  document.getElementById('rep-desc').textContent = llDesc;
+}
+
+function copyReporte() {
+  const g = id => document.getElementById(id).textContent;
+  const text = `Nuevas Conversaciones del Día: ${g('rep-conv')}
+Nuevos Outbound: ${g('rep-outbound')}
+Respuestas de Outbound: ${g('rep-resp-out')}
+Nuevos Inbound: ${g('rep-inbound')}
+Follow-ups: ${g('rep-fups')}
+Llamadas Propuestas: ${g('rep-prop')}
+Links Enviados: ${g('rep-link')}
+Llamadas Agendadas TOTALES: ${g('rep-agend')}
+Llamadas Agendadas CALIFICADAS: ${g('rep-cal')}
+Agendas Pendientes de Calificación: ${g('rep-pend-cal')}
+Agendas DESCALIFICADAS: ${g('rep-desc')}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = '📋 Copiar reporte', 2000);
+  });
 }
 
 async function updateStatus(recordId, select) {
