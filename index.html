@@ -237,6 +237,11 @@
     <div class="stat-card ll-link"><div class="stat-number" id="llLink">0</div><div class="stat-label">Link enviado</div></div>
     <div class="stat-card ll-agend"><div class="stat-number" id="llAgend">0</div><div class="stat-label">Agendadas</div></div>
   </div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);padding-top:0">
+    <div class="stat-card ll-cal"><div class="stat-number" id="llCal">0</div><div class="stat-label">Calificadas</div></div>
+    <div class="stat-card ll-pend"><div class="stat-number" id="llPendCal">0</div><div class="stat-label">Pendientes</div></div>
+    <div class="stat-card ll-desc"><div class="stat-number" id="llDesc">0</div><div class="stat-label">Descalificadas</div></div>
+  </div>
   <div class="progress-section">
     <div class="progress-header">
       <span class="progress-title">Tasa de cierre</span>
@@ -452,6 +457,14 @@ function updateStats() {
   const llLink = llFiltered.filter(l => l.status==='Link Enviado').length;
   const llAgend = llFiltered.filter(l => l.status==='Agendada').length;
   const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
+  const llCal = allLlamadas.filter(l => l.calificacion==='Calificada' && l.fechaCal && inRangeSimple(l.fechaCal)).length;
+  const llDesc = allLlamadas.filter(l => l.calificacion==='Descalificada' && l.fechaCal && inRangeSimple(l.fechaCal)).length;
+  const llPendCal = allLlamadas.filter(l => l.calificacion==='Pendiente' && l.fechaCal && inRangeSimple(l.fechaCal)).length;
+  if (document.getElementById('llCal')) {
+    document.getElementById('llCal').textContent = llCal;
+    document.getElementById('llDesc').textContent = llDesc;
+    document.getElementById('llPendCal').textContent = llPendCal;
+  }
   document.getElementById('llProp').textContent = llProp;
   document.getElementById('llLink').textContent = llLink;
   document.getElementById('llAgend').textContent = llAgend;
@@ -534,8 +547,8 @@ function updateReporte() {
   
   // Outbound del período
   const outbounds = allLeads.filter(l => inRangeSimple(l.fecha)).length;
-  const fupsOut = allLeads.filter(l => l.status==='Follow-up' && inRangeSimple(l.fechaResp||'')).length;
-  const respOut = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||'')).length;
+  const fupsOut = allLeads.filter(l => l.status==='Follow-up' && l.fechaResp && inRangeSimple(l.fechaResp)).length;
+  const respOut = allLeads.filter(l => l.status==='Contestó' && l.fechaResp && inRangeSimple(l.fechaResp)).length;
   const inbounds = allInbounds.filter(i => i.status==='Contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
   const fups = allFups.filter(f => inRangeSimple(f.fecha)).length;
   const newConv = respOut + inbounds;
