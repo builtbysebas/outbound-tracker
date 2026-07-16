@@ -289,12 +289,7 @@
   <button class="copy-btn" onclick="copyReporte()">📋 Copiar reporte</button>
 </div>
 <script>
-const TOKEN = 'patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34';
-const BASE = 'appiyrgAQxpLTDP36';
-const LEADS = 'tbl9s489yXa9fHA8h';
-const FUPS = 'tblDNB4KHlcOlFL7t';
-const INBOUNDS = 'tblgb441T075rTSQq';
-const LLAMADAS = 'tbl4HjdJL8RTc1X77';
+// Data loaded from Google Sheets via /api/get-data
 
 let allLeads = [], allFups = [], allInbounds = [], allLlamadas = [];
 let leadFilter = 'all', fupFilter = 'all', inbFilter = 'all', llFilter = 'all';
@@ -393,29 +388,22 @@ function setFupFilter(f, btn) {
   renderFups();
 }
 
-async function fetchAll(tableId) {
-  let url = `https://api.airtable.com/v0/${BASE}/${tableId}?sort[0][field]=Fecha&sort[0][direction]=desc&sort[1][field]=Hora&sort[1][direction]=desc`;
-  let records = [], offset = null;
-  do {
-    const r = await fetch(offset ? url+'&offset='+offset : url, {headers:{'Authorization':'Bearer '+TOKEN}});
-    const d = await r.json();
-    records = records.concat(d.records||[]);
-    offset = d.offset;
-  } while(offset);
-  return records;
-}
-
 async function loadAll() {
   document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
   document.getElementById('fupList').innerHTML = '<div class="loading"><div class="spinner fup"></div>Cargando...</div>';
-  const [lr, fr, ir, llr] = await Promise.all([fetchAll(LEADS), fetchAll(FUPS), fetchAll(INBOUNDS), fetchAll(LLAMADAS)]);
-  allLeads = lr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
-  allFups = fr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', tipo:r.fields.Tipo||'Manual'}));
-  allInbounds = ir.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Pendiente', fechaResp:r.fields['Fecha Respuesta']||''}));
-  allLlamadas = llr.map(r => ({id:r.id, username:r.fields.Usuario||'', fecha:r.fields.Fecha||'', hora:r.fields.Hora||'', status:r.fields.Status||'Propuesta', calificacion:r.fields.Calificacion||'', fechaCal:r.fields['Fecha Calificacion']||''}));
-  updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas(); updateReporte();
-  const now = new Date();
-  document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
+  try {
+    const res = await fetch('https://outbound-tracker.vercel.app/api/get-data');
+    const data = await res.json();
+    allLeads = data.leads || [];
+    allFups = data.fups || [];
+    allInbounds = data.inbounds || [];
+    allLlamadas = data.llamadas || [];
+    updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas(); updateReporte();
+    const now = new Date();
+    document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
+  } catch(e) {
+    document.getElementById('leadsList').innerHTML = '<div class="empty">Error cargando datos</div>';
+  }
 }
 
 function updateStats() {
@@ -595,16 +583,16 @@ Agendas DESCALIFICADAS: ${g('rep-desc')}`;
   });
 }
 
-async function updateStatus(recordId, select) {
+async function updateStatus(rowIndex, select) {
   const status = select.value;
   const sc = status==='Contestó'?'replied':status==='Follow-up'?'followup':'pending';
   select.className = 'status-select '+sc;
-  const lead = allLeads.find(l=>l.id===recordId);
+  const lead = allLeads[rowIndex - 2];
   if (lead) { lead.status = status; if (status!=='Pendiente') lead.fechaResp = todayStr(); }
   updateStats();
   await fetch('https://outbound-tracker.vercel.app/api/update-status', {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({recordId, status})
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rowIndex, status})
   });
 }
 
