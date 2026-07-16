@@ -24,9 +24,9 @@ module.exports = async (req, res) => {
     const [fecha, horaRaw] = now.split(', ');
     const hora = horaRaw.substring(0, 5);
 
-    await appendRow('Follow-ups', [usuario, fecha, hora, tipo]);
-    return res.status(200).json({ ok: true });
+    const result = await appendRow('Follow-ups', [usuario, fecha, hora, tipo]);
+    return res.status(200).json({ ok: true, usuario, fecha, hora, tipo, sheetsResult: result });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message, stack: err.stack });
   }
 };
