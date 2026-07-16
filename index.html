@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outbound Tracker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a12; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 24px 16px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 12px; color: rgba(255,255,255,0.4); }
+  .date-filter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-bottom: 12px; }
+  .date-input { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+  .date-input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; cursor: pointer; }
+  .date-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .date-btn.active { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.4); color: #a78bfa; }
+  .date-sep { color: rgba(255,255,255,0.3); font-size: 12px; }
+  .tabs { display: flex; gap: 4px; margin-top: 4px; }
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 10px 10px 0 0; border: none; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
+  .tab.active { background: #0a0a12; color: #fff; }
+  .tab.outbound.active { color: #a78bfa; }
+  .tab.followups.active { color: #38bdf8; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 16px 16px 0; }
+  .stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px; text-align: center; }
+  .stat-number { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card.total .stat-number { color: #a78bfa; }
+  .stat-card.pending .stat-number { color: #fb923c; }
+  .stat-card.replied .stat-number { color: #4ade80; }
+  .stat-card.followup .stat-number { color: #c084fc; }
+  .stat-card.fup-total .stat-number { color: #38bdf8; }
+  .stat-card.fup-auto .stat-number { color: #818cf8; }
+  .stat-card.fup-manual .stat-number { color: #f472b6; }
+  .stat-card.fup-today .stat-number { color: #34d399; }
+  .progress-section { padding: 12px 16px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .progress-title { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 500; }
+  .progress-pct { font-size: 12px; color: #a78bfa; font-weight: 700; }
+  .progress-bar { background: rgba(255,255,255,0.08); border-radius: 100px; height: 7px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 100px; transition: width 0.8s ease; }
+  .progress-fill.outbound { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+  .progress-fill.fup { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+  .section-title { padding: 0 16px 10px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+  .refresh-btn { background: rgba(167,139,250,0.15); border: none; color: #a78bfa; padding: 5px 10px; border-radius: 7px; font-size: 11px; cursor: pointer; font-weight: 600; }
+  .refresh-btn.fup { background: rgba(56,189,248,0.15); color: #38bdf8; }
+  .leads-list { padding: 0 16px 80px; display: flex; flex-direction: column; gap: 7px; }
+  .lead-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+  .lead-card:hover { background: rgba(255,255,255,0.07); }
+  .avatar { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
+  .avatar.pending { background: rgba(251,146,60,0.2); color: #fb923c; }
+  .avatar.replied { background: rgba(74,222,128,0.2); color: #4ade80; }
+  .avatar.followup { background: rgba(192,132,252,0.2); color: #c084fc; }
+  .avatar.auto { background: rgba(129,140,248,0.2); color: #818cf8; }
+  .avatar.manual { background: rgba(244,114,182,0.2); color: #f472b6; }
+  .lead-info { flex: 1; min-width: 0; }
+  .lead-username { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; text-decoration: none; display: block; }
+  .lead-username:hover { color: #a78bfa; }
+  .lead-meta { font-size: 11px; color: rgba(255,255,255,0.4); }
+  .status-select { padding: 4px 8px; border-radius: 16px; font-size: 11px; font-weight: 700; border: 1px solid; cursor: pointer; flex-shrink: 0; background: transparent; outline: none; }
+  .status-select.pending { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .status-select.replied { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .status-select.followup { background: rgba(192,132,252,0.15); color: #c084fc; border-color: rgba(192,132,252,0.3); }
+  .status-select option { background: #1a1a2e; color: #fff; }
+  .status-badge { padding: 4px 8px; border-radius: 16px; font-size: 11px; font-weight: 700; border: 1px solid; flex-shrink: 0; }
+  .status-badge.auto { background: rgba(129,140,248,0.15); color: #818cf8; border-color: rgba(129,140,248,0.3); }
+  .status-badge.manual { background: rgba(244,114,182,0.15); color: #f472b6; border-color: rgba(244,114,182,0.3); }
+  .filter-bar { display: flex; gap: 6px; padding: 0 16px 12px; overflow-x: auto; }
+  .filter-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 18px; font-size: 11px; cursor: pointer; white-space: nowrap; font-weight: 500; }
+  .filter-btn.active { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); color: #a78bfa; }
+  .filter-btn.inb-active { background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.5); color: #34d399; }
+  .filter-btn.fup-active { background: rgba(56,189,248,0.2); border-color: rgba(56,189,248,0.5); color: #38bdf8; }
+  .loading { text-align: center; padding: 50px 20px; color: rgba(255,255,255,0.3); }
+  .spinner { width: 32px; height: 32px; border: 3px solid rgba(167,139,250,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  .spinner.fup { border-color: rgba(56,189,248,0.2); border-top-color: #38bdf8; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .date-header { padding: 14px 16px 6px; font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.3); font-size: 14px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .range-label { font-size: 12px; color: rgba(255,255,255,0.5); padding: 0 16px 8px; }
+  .tab.inbounds.active { color: #34d399; }
+  .stat-card.inb-total .stat-number { color: #34d399; }
+  .stat-card.inb-pending .stat-number { color: #fb923c; }
+  .stat-card.inb-replied .stat-number { color: #4ade80; }
+  .stat-card.inb-no .stat-number { color: #f87171; }
+  .avatar.inb-pending { background: rgba(251,146,60,0.2); color: #fb923c; }
+  .avatar.inb-replied { background: rgba(74,222,128,0.2); color: #4ade80; }
+  .avatar.inb-no { background: rgba(248,113,113,0.2); color: #f87171; }
+  .status-badge.inb-pending { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .status-badge.inb-replied { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .status-badge.inb-no { background: rgba(248,113,113,0.15); color: #f87171; border-color: rgba(248,113,113,0.3); }
+  .refresh-btn.inb { background: rgba(52,211,153,0.15); color: #34d399; }
+  .tab.llamadas.active { color: #fbbf24; }
+  .stat-card.ll-total .stat-number { color: #fbbf24; }
+  .stat-card.ll-prop .stat-number { color: #fb923c; }
+  .stat-card.ll-link .stat-number { color: #60a5fa; }
+  .stat-card.ll-agend .stat-number { color: #4ade80; }
+  .avatar.ll-prop { background: rgba(251,146,60,0.2); color: #fb923c; }
+  .avatar.ll-link { background: rgba(96,165,250,0.2); color: #60a5fa; }
+  .avatar.ll-agend { background: rgba(74,222,128,0.2); color: #4ade80; }
+  .status-badge.ll-prop { background: rgba(251,146,60,0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); }
+  .status-badge.ll-link { background: rgba(96,165,250,0.15); color: #60a5fa; border-color: rgba(96,165,250,0.3); }
+  .status-badge.ll-agend { background: rgba(74,222,128,0.15); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+  .refresh-btn.ll { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .filter-btn.ll-active { background: rgba(251,191,36,0.2); border-color: rgba(251,191,36,0.5); color: #fbbf24; }
+  .tab.reporte.active { color: #fbbf24; }
+  .stat-card.ll-cal .stat-number { color: #4ade80; }
+  .stat-card.ll-desc .stat-number { color: #f87171; }
+  .stat-card.ll-pend .stat-number { color: #fb923c; }
+  .reporte-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 20px; margin: 0 16px 12px; }
+  .reporte-title { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+  .reporte-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .reporte-row:last-child { border-bottom: none; }
+  .reporte-label { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .reporte-value { font-size: 16px; font-weight: 800; color: #fff; }
+  .copy-btn { background: rgba(167,139,250,0.15); border: none; color: #a78bfa; padding: 8px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; margin: 0 16px 16px; width: calc(100% - 32px); }
+  .copy-btn:hover { background: rgba(167,139,250,0.25); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>📊 Outbound Tracker</h1>
+      <p id="todayDate"></p>
+    </div>
+  </div>
+  <div class="date-filter">
+    <button class="date-btn active" onclick="setQuick('today', this)">Hoy</button>
+    <button class="date-btn" onclick="setQuick('yesterday', this)">Ayer</button>
+    <button class="date-btn" onclick="setQuick('week', this)">Esta semana</button>
+    <button class="date-btn" onclick="setQuick('month', this)">Este mes</button>
+    <button class="date-btn" onclick="setQuick('all', this)">Todo</button>
+    <span class="date-sep">|</span>
+    <input type="date" class="date-input" id="dateFrom" onchange="setCustomRange()">
+    <span class="date-sep">→</span>
+    <input type="date" class="date-input" id="dateTo" onchange="setCustomRange()">
+  </div>
+  <div class="tabs">
+    <button class="tab outbound active" onclick="switchTab('outbound')">Outbound</button>
+    <button class="tab followups" onclick="switchTab('followups')">Follow-ups</button>
+    <button class="tab inbounds" onclick="switchTab('inbounds')">Inbounds</button>
+    <button class="tab llamadas" onclick="switchTab('llamadas')">Llamadas</button>
+    <button class="tab reporte" onclick="switchTab('reporte')">📋 Reporte</button>
+  </div>
+</div>
+
+<div class="page active" id="page-outbound">
+  <div class="stats-grid">
+    <div class="stat-card total"><div class="stat-number" id="totalCount">0</div><div class="stat-label">Outbounds</div></div>
+    <div class="stat-card pending"><div class="stat-number" id="pendingCount">0</div><div class="stat-label">Sin resp.</div></div>
+    <div class="stat-card replied"><div class="stat-number" id="repliedCount">0</div><div class="stat-label">Contestó</div></div>
+    <div class="stat-card followup"><div class="stat-number" id="followupCount">0</div><div class="stat-label">Follow-up</div></div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title" id="progressLabel">Meta diaria: 70 outbounds</span>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill outbound" id="progressFill" style="width:0%"></div></div>
+  </div>
+  <div class="section-title">
+    <span>Leads</span>
+    <button class="refresh-btn" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setLeadFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setLeadFilter('Pendiente', this)">Sin resp.</button>
+    <button class="filter-btn" onclick="setLeadFilter('Contestó', this)">Contestó</button>
+    <button class="filter-btn" onclick="setLeadFilter('Follow-up', this)">Follow-up</button>
+  </div>
+  <div class="leads-list" id="leadsList"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+</div>
+
+<div class="page" id="page-followups">
+  <div class="stats-grid">
+    <div class="stat-card fup-total"><div class="stat-number" id="fupTotal">0</div><div class="stat-label">Total</div></div>
+    <div class="stat-card fup-today"><div class="stat-number" id="fupPeriod">0</div><div class="stat-label">En período</div></div>
+    <div class="stat-card fup-auto"><div class="stat-number" id="fupAuto">0</div><div class="stat-label">Automático</div></div>
+    <div class="stat-card fup-manual"><div class="stat-number" id="fupManual">0</div><div class="stat-label">Manual</div></div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Meta diaria: 30 follow-ups</span>
+      <span class="progress-pct" id="fupProgressPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill fup" id="fupProgressFill" style="width:0%"></div></div>
+  </div>
+  <div class="section-title">
+    <span>Follow-ups</span>
+    <button class="refresh-btn fup" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn fup-active" onclick="setFupFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setFupFilter('Automático', this)">Automático</button>
+    <button class="filter-btn" onclick="setFupFilter('Manual', this)">Manual</button>
+  </div>
+  <div class="leads-list" id="fupList"><div class="loading"><div class="spinner fup"></div>Cargando...</div></div>
+</div>
+
+
+<!-- INBOUNDS PAGE -->
+<div class="page" id="page-inbounds">
+  <div class="stats-grid">
+    <div class="stat-card inb-total"><div class="stat-number" id="inbTotal">0</div><div class="stat-label">Total</div></div>
+    <div class="stat-card inb-pending"><div class="stat-number" id="inbPending">0</div><div class="stat-label">Pendiente</div></div>
+    <div class="stat-card inb-replied"><div class="stat-number" id="inbReplied">0</div><div class="stat-label">Contestó</div></div>
+    <div class="stat-card inb-no"><div class="stat-number" id="inbNo">0</div><div class="stat-label">No contestó</div></div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Tasa de conversión</span>
+      <span class="progress-pct" id="inbPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="inbFill" style="width:0%;background:linear-gradient(90deg,#059669,#34d399)"></div></div>
+  </div>
+  <div class="section-title">
+    <span>Inbounds</span>
+    <button class="refresh-btn inb" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn inb-active" onclick="setInbFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setInbFilter('Pendiente', this)">Pendiente</button>
+    <button class="filter-btn" onclick="setInbFilter('Contestó', this)">Contestó</button>
+    <button class="filter-btn" onclick="setInbFilter('No contestó', this)">No contestó</button>
+  </div>
+  <div class="leads-list" id="inbList"><div class="loading"><div class="spinner" style="border-top-color:#34d399"></div>Cargando...</div></div>
+</div>
+
+<!-- LLAMADAS PAGE -->
+<div class="page" id="page-llamadas">
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat-card ll-prop"><div class="stat-number" id="llProp">0</div><div class="stat-label">Propuestas</div></div>
+    <div class="stat-card ll-link"><div class="stat-number" id="llLink">0</div><div class="stat-label">Link enviado</div></div>
+    <div class="stat-card ll-agend"><div class="stat-number" id="llAgend">0</div><div class="stat-label">Agendadas</div></div>
+  </div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);padding-top:0">
+    <div class="stat-card ll-cal"><div class="stat-number" id="llCal">0</div><div class="stat-label">Calificadas</div></div>
+    <div class="stat-card ll-pend"><div class="stat-number" id="llPendCal">0</div><div class="stat-label">Pendientes</div></div>
+    <div class="stat-card ll-desc"><div class="stat-number" id="llDesc">0</div><div class="stat-label">Descalificadas</div></div>
+  </div>
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Tasa de cierre</span>
+      <span class="progress-pct" id="llPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="llFill" style="width:0%;background:linear-gradient(90deg,#d97706,#fbbf24)"></div></div>
+  </div>
+  <div class="section-title">
+    <span>Llamadas</span>
+    <button class="refresh-btn ll" onclick="loadAll()">↻ Actualizar</button>
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn ll-active" onclick="setLlFilter('all', this)">Todas</button>
+    <button class="filter-btn" onclick="setLlFilter('Propuesta', this)">Propuesta</button>
+    <button class="filter-btn" onclick="setLlFilter('Link Enviado', this)">Link enviado</button>
+    <button class="filter-btn" onclick="setLlFilter('Agendada', this)">Agendada</button>
+  </div>
+  <div class="leads-list" id="llList"><div class="loading"><div class="spinner" style="border-top-color:#fbbf24"></div>Cargando...</div></div>
+</div>
+
+<!-- REPORTE PAGE -->
+<div class="page" id="page-reporte">
+  <div style="padding:12px 16px 0;font-size:12px;color:rgba(255,255,255,0.4)">Datos del período seleccionado arriba</div>
+  <div style="height:12px"></div>
+
+  <div class="reporte-box">
+    <div class="reporte-title">📱 Conversaciones</div>
+    <div class="reporte-row"><span class="reporte-label">Nuevas Conversaciones del Día</span><span class="reporte-value" id="rep-conv">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Nuevos Outbound</span><span class="reporte-value" id="rep-outbound">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Respuestas de Outbound</span><span class="reporte-value" id="rep-resp-out">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Nuevos Inbound</span><span class="reporte-value" id="rep-inbound">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Follow-ups</span><span class="reporte-value" id="rep-fups">0</span></div>
+  </div>
+
+  <div class="reporte-box">
+    <div class="reporte-title">📞 Llamadas</div>
+    <div class="reporte-row"><span class="reporte-label">Llamadas Propuestas</span><span class="reporte-value" id="rep-prop">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Links Enviados</span><span class="reporte-value" id="rep-link">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Llamadas Agendadas TOTALES</span><span class="reporte-value" id="rep-agend">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Llamadas Agendadas CALIFICADAS</span><span class="reporte-value" id="rep-cal">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Agendas Pendientes de Calificación</span><span class="reporte-value" id="rep-pend-cal">0</span></div>
+    <div class="reporte-row"><span class="reporte-label">Agendas DESCALIFICADAS</span><span class="reporte-value" id="rep-desc">0</span></div>
+  </div>
+
+  <button class="copy-btn" onclick="copyReporte()">📋 Copiar reporte</button>
+</div>
+<script>
+// Data loaded from Google Sheets via /api/get-data
+
+let allLeads = [], allFups = [], allInbounds = [], allLlamadas = [];
+let leadFilter = 'all', fupFilter = 'all', inbFilter = 'all', llFilter = 'all';
+let dateFrom = '', dateTo = '';
+
+function todayStr() { return new Date().toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}); }
+function yesterdayStr() { return new Date(Date.now()-86400000).toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}); }
+function weekStart() {
+  const d = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Costa_Rica'}));
+  d.setDate(d.getDate() - d.getDay());
+  return d.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
+}
+function monthStart() {
+  const d = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Costa_Rica'}));
+  d.setDate(1);
+  return d.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'});
+}
+
+function setQuick(range, btn) {
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  const today = todayStr();
+  if (range === 'today') { dateFrom = today; dateTo = today; }
+  else if (range === 'yesterday') { dateFrom = yesterdayStr(); dateTo = yesterdayStr(); }
+  else if (range === 'week') { dateFrom = weekStart(); dateTo = today; }
+  else if (range === 'month') { dateFrom = monthStart(); dateTo = today; }
+  else { dateFrom = ''; dateTo = ''; }
+  renderLeads(); renderFups(); updateStats();
+}
+
+function setCustomRange() {
+  document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+  dateFrom = document.getElementById('dateFrom').value;
+  dateTo = document.getElementById('dateTo').value;
+  renderLeads(); renderFups(); updateStats();
+}
+
+function inRange(fecha, respFecha) {
+  if (!dateFrom && !dateTo) return true;
+  const from = dateFrom || '0000-00-00';
+  const to = dateTo || '9999-99-99';
+  return (fecha >= from && fecha <= to) || (respFecha && respFecha >= from && respFecha <= to);
+}
+
+function inRangeSimple(fecha) {
+  if (!dateFrom && !dateTo) return true;
+  const from = dateFrom || '0000-00-00';
+  const to = dateTo || '9999-99-99';
+  return fecha >= from && fecha <= to;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const today = todayStr(), yest = yesterdayStr();
+  if (d === today) return 'Hoy';
+  if (d === yest) return 'Ayer';
+  return new Date(d+'T00:00:00').toLocaleDateString('es', {weekday:'short', day:'numeric', month:'short'});
+}
+
+function getInitials(u) { return (u||'?').replace('@','').substring(0,2).toUpperCase(); }
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab.'+tab).classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+}
+
+function setLlFilter(f, btn) {
+  llFilter = f;
+  document.querySelectorAll('#page-llamadas .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('ll-active'); });
+  btn.classList.add('ll-active');
+  renderLlamadas();
+}
+
+function setInbFilter(f, btn) {
+  inbFilter = f;
+  document.querySelectorAll('#page-inbounds .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('inb-active'); });
+  btn.classList.add('inb-active');
+  renderInbounds();
+}
+
+function setLeadFilter(f, btn) {
+  leadFilter = f;
+  document.querySelectorAll('#page-outbound .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeads();
+}
+
+function setFupFilter(f, btn) {
+  fupFilter = f;
+  document.querySelectorAll('#page-followups .filter-btn').forEach(b => { b.classList.remove('active'); b.classList.remove('fup-active'); });
+  btn.classList.add('fup-active');
+  renderFups();
+}
+
+async function loadAll() {
+  document.getElementById('leadsList').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
+  document.getElementById('fupList').innerHTML = '<div class="loading"><div class="spinner fup"></div>Cargando...</div>';
+  try {
+    const res = await fetch('https://outbound-tracker.vercel.app/api/get-data');
+    const data = await res.json();
+    allLeads = data.leads || [];
+    allFups = data.fups || [];
+    allInbounds = data.inbounds || [];
+    allLlamadas = data.llamadas || [];
+    updateStats(); renderLeads(); renderFups(); renderInbounds(); renderLlamadas(); updateReporte();
+    const now = new Date();
+    document.getElementById('todayDate').textContent = now.toLocaleDateString('es', {weekday:'long', day:'numeric', month:'long'}).replace(/^\w/, c=>c.toUpperCase());
+  } catch(e) {
+    document.getElementById('leadsList').innerHTML = '<div class="empty">Error cargando datos</div>';
+  }
+}
+
+function updateStats() {
+  const outbounds = allLeads.filter(l => inRangeSimple(l.fecha)).length;
+  const pending = allLeads.filter(l => l.status==='Pendiente' && inRangeSimple(l.fecha)).length;
+  const replied = allLeads.filter(l => l.status==='Contestó' && inRangeSimple(l.fechaResp||'')).length;
+  const fu = allLeads.filter(l => l.status==='Follow-up' && inRangeSimple(l.fechaResp||'')).length;
+  const pct = Math.min(100, Math.round((outbounds/70)*100));
+  document.getElementById('totalCount').textContent = outbounds;
+  document.getElementById('pendingCount').textContent = pending;
+  document.getElementById('repliedCount').textContent = replied;
+  document.getElementById('followupCount').textContent = fu;
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('progressFill').style.width = pct+'%';
+
+  const fupFiltered = allFups.filter(f => inRangeSimple(f.fecha));
+  document.getElementById('fupTotal').textContent = allFups.length;
+  document.getElementById('fupPeriod').textContent = fupFiltered.length;
+  document.getElementById('fupAuto').textContent = fupFiltered.filter(f=>f.tipo==='Automático').length;
+  document.getElementById('fupManual').textContent = fupFiltered.filter(f=>f.tipo==='Manual').length;
+  const fupPct = Math.min(100, Math.round((fupFiltered.length/30)*100));
+  document.getElementById('fupProgressPct').textContent = fupPct+'%';
+  document.getElementById('fupProgressFill').style.width = fupPct+'%';
+
+  const inbFiltered = allInbounds.filter(f => inRangeSimple(f.fecha));
+  const inbReplied = allInbounds.filter(i => i.status==='Contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const inbNo = allInbounds.filter(i => i.status==='No contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const inbPending = inbFiltered.filter(i=>i.status==='Pendiente').length;
+  const inbPct = inbFiltered.length ? Math.round((inbReplied/inbFiltered.length)*100) : 0;
+  document.getElementById('inbTotal').textContent = inbFiltered.length;
+  document.getElementById('inbPending').textContent = inbPending;
+  document.getElementById('inbReplied').textContent = inbReplied;
+  document.getElementById('inbNo').textContent = inbNo;
+  document.getElementById('inbPct').textContent = inbPct+'%';
+  document.getElementById('inbFill').style.width = inbPct+'%';
+
+  const llFiltered = allLlamadas.filter(l => inRangeSimple(l.fecha));
+  const llProp = llFiltered.filter(l => l.status==='Propuesta').length;
+  const llLink = llFiltered.filter(l => l.status==='Link Enviado').length;
+  const llAgend = llFiltered.filter(l => l.status==='Agendada').length;
+  const llPct = llProp ? Math.round((llAgend/llProp)*100) : 0;
+  const llCal = allLlamadas.filter(l => l.calificacion==='Calificada' && l.fechaCal && inRangeSimple(l.fechaCal)).length;
+  const llDesc = allLlamadas.filter(l => l.calificacion==='Descalificada' && l.fechaCal && inRangeSimple(l.fechaCal)).length;
+  const llPendCal = allLlamadas.filter(l => l.calificacion==='Pendiente' && l.fechaCal && inRangeSimple(l.fechaCal)).length;
+  if (document.getElementById('llCal')) {
+    document.getElementById('llCal').textContent = llCal;
+    document.getElementById('llDesc').textContent = llDesc;
+    document.getElementById('llPendCal').textContent = llPendCal;
+  }
+  document.getElementById('llProp').textContent = llProp;
+  document.getElementById('llLink').textContent = llLink;
+  document.getElementById('llAgend').textContent = llAgend;
+  document.getElementById('llPct').textContent = llPct+'%';
+  document.getElementById('llFill').style.width = llPct+'%';
+}
+
+function renderLeads() {
+  let list = allLeads.filter(l => inRangeSimple(l.fecha) || (l.fechaResp && inRangeSimple(l.fechaResp)));
+  if (leadFilter !== 'all') list = list.filter(l => l.status === leadFilter);
+  if (!list.length) { document.getElementById('leadsList').innerHTML = '<div class="empty">No hay leads en este período</div>'; return; }
+  let html = '', lastDate = '';
+  list.forEach(l => {
+    const dateKey = l.fecha;
+    if (dateKey !== lastDate) { html += `<div class="date-header">${formatDate(dateKey)}</div>`; lastDate = dateKey; }
+    const sc = l.status==='Contestó'?'replied':l.status==='Follow-up'?'followup':'pending';
+    const ig = `https://www.instagram.com/${(l.username||'').replace('@','')}/`;
+    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(l.username)}</div><div class="lead-info"><a href="${ig}" target="_blank" class="lead-username">${l.username} <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">${l.fecha}${l.hora?' · '+l.hora:''}${l.fechaResp?' · Resp: '+l.fechaResp:''}</div></div><select class="status-select ${sc}" onchange="updateStatus(${l.rowIndex}, this)"><option value="Pendiente" ${l.status==='Pendiente'?'selected':''}>Sin resp.</option><option value="Contestó" ${l.status==='Contestó'?'selected':''}>Contestó</option><option value="Follow-up" ${l.status==='Follow-up'?'selected':''}>Follow-up</option></select></div>`;
+  });
+  document.getElementById('leadsList').innerHTML = html;
+}
+
+function renderFups() {
+  let list = allFups.filter(f => inRangeSimple(f.fecha));
+  if (fupFilter !== 'all') list = list.filter(f => f.tipo === fupFilter);
+  if (!list.length) { document.getElementById('fupList').innerHTML = '<div class="empty">No hay follow-ups en este período</div>'; return; }
+  let html = '', lastDate = '';
+  list.forEach(f => {
+    if (f.fecha !== lastDate) { html += `<div class="date-header">${formatDate(f.fecha)}</div>`; lastDate = f.fecha; }
+    const sc = f.tipo==='Automático'?'auto':'manual';
+    const ig = `https://www.instagram.com/${(f.username||'').replace('@','')}/`;
+    html += `<div class="lead-card"><div class="avatar ${sc}">${getInitials(f.username)}</div><div class="lead-info"><a href="${ig}" target="_blank" class="lead-username">${f.username} <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">${f.fecha}${f.hora?' · '+f.hora:''}</div></div><div class="status-badge ${sc}">${f.tipo}</div></div>`;
+  });
+  document.getElementById('fupList').innerHTML = html;
+}
+
+function renderLlamadas() {
+  const statusOrder = {'Propuesta':0,'Link Enviado':1,'Agendada':2};
+  let list = allLlamadas.filter(l => inRangeSimple(l.fecha));
+  
+  // Deduplicate: group by username, keep most advanced status, earliest date
+  const map = {};
+  list.forEach(l => {
+    if (!map[l.username] || statusOrder[l.status] > statusOrder[map[l.username].status]) {
+      map[l.username] = l;
+    }
+  });
+  let deduped = Object.values(map);
+  
+  if (llFilter !== 'all') deduped = deduped.filter(l => l.status === llFilter);
+  deduped.sort((a,b) => (b.fecha+b.hora).localeCompare(a.fecha+a.hora));
+  
+  if (!deduped.length) { document.getElementById('llList').innerHTML = '<div class="empty">No hay llamadas en este período</div>'; return; }
+  let html = '', lastDate = '';
+  deduped.forEach(l => {
+    if (l.fecha !== lastDate) { html += '<div class="date-header">'+formatDate(l.fecha)+'</div>'; lastDate = l.fecha; }
+    const sc = l.status==='Agendada'?'ll-agend':l.status==='Link Enviado'?'ll-link':'ll-prop';
+    const ig = 'https://www.instagram.com/'+(l.username||'').replace('@','')+'/';
+    html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(l.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+l.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+l.fecha+(l.hora?' · '+l.hora:'')+'</div></div><div class="status-badge '+sc+'">'+l.status+'</div></div>';
+  });
+  document.getElementById('llList').innerHTML = html;
+}
+
+function renderInbounds() {
+  let list = allInbounds.filter(f => inRangeSimple(f.fecha) || (f.fechaResp && inRangeSimple(f.fechaResp)));
+  if (inbFilter !== 'all') list = list.filter(f => f.status === inbFilter);
+  if (!list.length) { document.getElementById('inbList').innerHTML = '<div class="empty">No hay inbounds en este período</div>'; return; }
+  let html = '', lastDate = '';
+  list.forEach(f => {
+    if (f.fecha !== lastDate) { html += '<div class="date-header">'+formatDate(f.fecha)+'</div>'; lastDate = f.fecha; }
+    const sc = f.status==='Contestó'?'inb-replied':f.status==='No contestó'?'inb-no':'inb-pending';
+    const ig = 'https://www.instagram.com/'+(f.username||'').replace('@','')+'/';
+    html += '<div class="lead-card"><div class="avatar '+sc+'">'+getInitials(f.username)+'</div><div class="lead-info"><a href="'+ig+'" target="_blank" class="lead-username">'+f.username+' <span style="font-size:10px;opacity:0.3">↗</span></a><div class="lead-meta">'+f.fecha+(f.hora?' · '+f.hora:'')+(f.fechaResp?' · Resp: '+f.fechaResp:'')+'</div></div><div class="status-badge '+sc+'">'+f.status+'</div></div>';
+  });
+  document.getElementById('inbList').innerHTML = html;
+}
+
+function updateReporte() {
+  const today = todayStr();
+  
+  // Outbound del período
+  const outbounds = allLeads.filter(l => inRangeSimple(l.fecha)).length;
+  const fupsOut = allLeads.filter(l => l.status==='Follow-up' && l.fechaResp && inRangeSimple(l.fechaResp)).length;
+  const respOut = allLeads.filter(l => l.status==='Contestó' && l.fechaResp && inRangeSimple(l.fechaResp)).length;
+  const inbounds = allInbounds.filter(i => i.status==='Contestó' && inRangeSimple(i.fechaResp||i.fecha)).length;
+  const fups = allFups.filter(f => inRangeSimple(f.fecha)).length;
+  const newConv = respOut + inbounds;
+  const newOut = outbounds + fupsOut;
+
+  // Llamadas
+  const llProp = allLlamadas.filter(l => l.status==='Propuesta' && inRangeSimple(l.fecha)).length;
+  const llLink = allLlamadas.filter(l => l.status==='Link Enviado' && inRangeSimple(l.fecha)).length;
+  const llAgend = allLlamadas.filter(l => l.status==='Agendada' && inRangeSimple(l.fecha)).length;
+  const llCal = allLlamadas.filter(l => l.calificacion==='Calificada' && inRangeSimple(l.fechaCal||'')).length;
+  const llPendCal = allLlamadas.filter(l => l.calificacion==='Pendiente' && inRangeSimple(l.fechaCal||l.fecha)).length;
+  const llDesc = allLlamadas.filter(l => l.calificacion==='Descalificada' && inRangeSimple(l.fechaCal||'')).length;
+
+  document.getElementById('rep-conv').textContent = newConv;
+  document.getElementById('rep-outbound').textContent = newOut;
+  document.getElementById('rep-resp-out').textContent = respOut;
+  document.getElementById('rep-inbound').textContent = inbounds;
+  document.getElementById('rep-fups').textContent = fups;
+  document.getElementById('rep-prop').textContent = llProp;
+  document.getElementById('rep-link').textContent = llLink;
+  document.getElementById('rep-agend').textContent = llAgend;
+  document.getElementById('rep-cal').textContent = llCal;
+  document.getElementById('rep-pend-cal').textContent = llPendCal;
+  document.getElementById('rep-desc').textContent = llDesc;
+}
+
+function copyReporte() {
+  const g = id => document.getElementById(id).textContent;
+  const text = `Nuevas Conversaciones del Día: ${g('rep-conv')}
+Nuevos Outbound: ${g('rep-outbound')}
+Respuestas de Outbound: ${g('rep-resp-out')}
+Nuevos Inbound: ${g('rep-inbound')}
+Follow-ups: ${g('rep-fups')}
+Llamadas Propuestas: ${g('rep-prop')}
+Links Enviados: ${g('rep-link')}
+Llamadas Agendadas TOTALES: ${g('rep-agend')}
+Llamadas Agendadas CALIFICADAS: ${g('rep-cal')}
+Agendas Pendientes de Calificación: ${g('rep-pend-cal')}
+Agendas DESCALIFICADAS: ${g('rep-desc')}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => btn.textContent = '📋 Copiar reporte', 2000);
+  });
+}
+
+async function updateStatus(rowIndex, select) {
+  const status = select.value;
+  const sc = status==='Contestó'?'replied':status==='Follow-up'?'followup':'pending';
+  select.className = 'status-select '+sc;
+  const lead = allLeads[rowIndex - 2];
+  if (lead) { lead.status = status; if (status!=='Pendiente') lead.fechaResp = todayStr(); }
+  updateStats();
+  await fetch('https://outbound-tracker.vercel.app/api/update-status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({rowIndex, status})
+  });
+}
+
+const today = todayStr();
+dateFrom = today; dateTo = today;
+document.getElementById('dateFrom').value = today;
+document.getElementById('dateTo').value = today;
+loadAll();
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>
