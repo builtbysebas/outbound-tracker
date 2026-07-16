@@ -1,3 +1,5 @@
+const { appendRow } = require('./sheets-helper');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -21,21 +23,8 @@ module.exports = async (req, res) => {
     const [fecha, horaRaw] = now.split(', ');
     const hora = horaRaw.substring(0, 5);
 
-    const r = await fetch('https://api.airtable.com/v0/appiyrgAQxpLTDP36/tblgb441T075rTSQq', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        records: [{ fields: { Usuario: usuario, Fecha: fecha, Hora: hora, Status: 'Pendiente' } }]
-      })
-    });
-
-    const data = await r.json();
-    const recordId = data.records?.[0]?.id || '';
-    return res.status(200).json({ ok: true, recordId });
-
+    await appendRow('Inbounds', [usuario, fecha, hora, 'Pendiente', '']);
+    return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

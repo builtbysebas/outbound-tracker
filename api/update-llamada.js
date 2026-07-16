@@ -1,3 +1,5 @@
+const { appendRow } = require('./sheets-helper');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -18,27 +20,12 @@ module.exports = async (req, res) => {
     if (usuario && !usuario.startsWith('@')) usuario = '@' + usuario;
     const status = body.status;
 
-    if (!status) return res.status(400).json({ error: 'Missing status' });
-
     const now = new Date().toLocaleString('en-CA', { timeZone: 'America/Costa_Rica', hour12: false });
     const [fecha, horaRaw] = now.split(', ');
     const hora = horaRaw.substring(0, 5);
 
-    const fields = { Usuario: usuario, Fecha: fecha, Hora: hora, Status: status };
-    if (status === 'Link Enviado') fields['Link Enviado'] = 1;
-    if (status === 'Agendada') fields['Agendada'] = 1;
-
-    const r = await fetch('https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ records: [{ fields }] })
-    });
-
-    const data = await r.json();
-    return res.status(200).json({ ok: true, recordId: data.records?.[0]?.id || '' });
+    await appendRow('Llamadas', [usuario, fecha, hora, status, '', '', '']);
+    return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

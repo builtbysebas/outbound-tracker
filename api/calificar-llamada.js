@@ -1,3 +1,5 @@
+const { getRows, updateRow } = require('./sheets-helper');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -16,33 +18,25 @@ module.exports = async (req, res) => {
     const body = JSON.parse(Buffer.concat(chunks).toString());
     let usuario = body.usuario || body.username || '';
     if (usuario && !usuario.startsWith('@')) usuario = '@' + usuario;
-    const calificacion = body.calificacion; // "Calificada", "Descalificada", "Pendiente"
-
-    if (!calificacion) return res.status(400).json({ error: 'Missing calificacion' });
+    const calificacion = body.calificacion;
 
     const now = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Costa_Rica' });
+    const rows = await getRows('Llamadas');
 
-    // Find most recent Agendada record for this user
-    const search = await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77?filterByFormula=AND({Usuario}="${usuario}",{Status}="Agendada")&sort[0][field]=Fecha&sort[0][direction]=desc&maxRecords=1`,
-      { headers: { Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34' } }
-    );
-
-    const searchData = await search.json();
-    const record = searchData.records?.[0];
-    if (!record) return res.status(404).json({ error: 'No agendada record found for ' + usuario });
-
-    await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl4HjdJL8RTc1X77/${record.id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fields: { Calificacion: calificacion, 'Fecha Calificacion': now } })
+    let targetIndex = -1;
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (rows[i][0] === usuario && rows[i][3] === 'Agendada') {
+        targetIndex = i + 1;
+        break;
       }
-    );
+    }
+
+    if (targetIndex === -1) return res.status(404).json({ error: 'No agendada record found' });
+
+    const row = rows[targetIndex - 1];
+    row[4] = calificacion;
+    row[5] = now;
+    await updateRow('Llamadas', targetIndex, row);
 
     return res.status(200).json({ ok: true });
   } catch (err) {

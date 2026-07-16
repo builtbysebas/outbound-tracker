@@ -1,3 +1,5 @@
+const { getRows, updateRow } = require('./sheets-helper');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -18,29 +20,25 @@ module.exports = async (req, res) => {
     if (usuario && !usuario.startsWith('@')) usuario = '@' + usuario;
 
     const now = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Costa_Rica' });
+    const rows = await getRows('Leads');
 
-    const search = await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl9s489yXa9fHA8h?filterByFormula=AND({Usuario}="${usuario}",{Status}="Pendiente")&sort[0][field]=Fecha&sort[0][direction]=desc&maxRecords=1`,
-      { headers: { Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34' } }
-    );
-
-    const searchData = await search.json();
-    const record = searchData.records?.[0];
-    if (!record) return res.status(404).json({ error: 'No pending outbound found for ' + usuario });
-
-    await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tbl9s489yXa9fHA8h/${record.id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fields: { Status: 'Contestó', 'Fecha Respuesta': now } })
+    // Find most recent pending row for this user (skip header row 1)
+    let targetIndex = -1;
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (rows[i][0] === usuario && rows[i][3] === 'Pendiente') {
+        targetIndex = i + 1; // 1-based
+        break;
       }
-    );
+    }
 
-    return res.status(200).json({ ok: true, usuario });
+    if (targetIndex === -1) return res.status(404).json({ error: 'No pending outbound found' });
+
+    const row = rows[targetIndex - 1];
+    row[3] = 'Contestó';
+    row[4] = now; // Fecha Respuesta
+    await updateRow('Leads', targetIndex, row);
+
+    return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

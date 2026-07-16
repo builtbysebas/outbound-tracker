@@ -1,3 +1,5 @@
+const { getRows, updateRow } = require('./sheets-helper');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -17,33 +19,23 @@ module.exports = async (req, res) => {
     let usuario = body.usuario || body.username || '';
     if (usuario && !usuario.startsWith('@')) usuario = '@' + usuario;
     const status = body.status || 'Contestó';
-
     const now = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Costa_Rica' });
 
-    // Search for the most recent pending record with this username
-    const search = await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tblgb441T075rTSQq?filterByFormula=AND({Usuario}="${usuario}",{Status}="Pendiente")&sort[0][field]=Fecha&sort[0][direction]=desc&maxRecords=1`,
-      { headers: { Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34' } }
-    );
-
-    const searchData = await search.json();
-    const record = searchData.records?.[0];
-
-    if (!record) {
-      return res.status(404).json({ error: 'No pending inbound found for this user' });
+    const rows = await getRows('Inbounds');
+    let targetIndex = -1;
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (rows[i][0] === usuario && rows[i][3] === 'Pendiente') {
+        targetIndex = i + 1;
+        break;
+      }
     }
 
-    const r = await fetch(
-      `https://api.airtable.com/v0/appiyrgAQxpLTDP36/tblgb441T075rTSQq/${record.id}`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: 'Bearer patHkf1FRT9N5mLx9.789bd4f8be94e6d2566c3fde5f4497de4b789eb602e3e3340d8ca57c929c8f34',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ fields: { Status: status, 'Fecha Respuesta': now } })
-      }
-    );
+    if (targetIndex === -1) return res.status(404).json({ error: 'No pending inbound found' });
+
+    const row = rows[targetIndex - 1];
+    row[3] = status;
+    row[4] = now;
+    await updateRow('Inbounds', targetIndex, row);
 
     return res.status(200).json({ ok: true });
   } catch (err) {
